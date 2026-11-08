@@ -50,12 +50,17 @@
   }
 
   /* ===== 上のバー ===== */
-  header{display:flex;align-items:center;gap:8px;padding:10px 2px 8px}
+  header{display:flex;align-items:center;gap:5px;padding:10px 2px 8px}
+  .title{margin-right:3px}
   .title{flex:1;min-width:0}
-  .title h1{font-size:20px;letter-spacing:.5px}
-  .title p{font-size:11px;color:var(--sub);margin-top:1px}
+  /* 画面の幅に合わせて大きさを変える（狭いスマホでもボタンと重ならない） */
+  .title h1{font-size:clamp(19px, 6.2vw, 25px);letter-spacing:.5px;display:flex;align-items:center;gap:6px;white-space:nowrap}
+  .title h1 .logo{font-size:clamp(24px, 8vw, 32px);line-height:1}   /* 🌏 のアイコン */
+  /* とても狭いスマホ（幅340px以下）はさらに小さく */
+  @media (max-width:340px){ .title h1{font-size:16px} .title h1 .logo{font-size:21px} }
+  .title p{font-size:12px;color:var(--sub);margin-top:1px}
   .round{
-    width:40px;height:40px;border-radius:50%;flex-shrink:0;font-size:19px;
+    width:34px;height:34px;border-radius:50%;flex-shrink:0;font-size:16px;
     display:flex;align-items:center;justify-content:center;
     background:var(--glass);border:1px solid var(--line);
   }
@@ -339,11 +344,11 @@
 <!-- ===== 上のバー ===== -->
 <header>
   <div class="title">
-    <h1>🌏 ほんやくくん</h1>
+    <h1><span class="logo">🌏</span>ほんやくくん</h1>
     <p>世界と繋がるポケット通訳</p>
   </div>
   <button class="round" id="ttsBtn" title="読み上げ ON/OFF"><svg><use href="#i-vol"/></svg></button>
-  <button class="round" id="fsBtn" title="文字の大きさ" style="font-weight:bold;font-size:15px">Aa</button>
+  <button class="round" id="fsBtn" title="文字の大きさ" style="font-weight:bold;font-size:13px">Aa</button>
   <button class="round" id="setBtn" title="設定">⚙</button>
   <button class="round" id="helpBtn" title="使い方" style="font-weight:bold">?</button>
 </header>
