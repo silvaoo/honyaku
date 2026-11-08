@@ -143,6 +143,36 @@
   }
   .chip.edit{border-color:var(--cyan);color:var(--cyan)}   /* ✏️編集ボタン */
 
+  /* ===== 声の設定画面 ===== */
+  #setting{
+    position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;
+    align-items:center;justify-content:center;z-index:45;padding:16px;
+  }
+  #setting.on{display:flex}
+  #setting .box{
+    width:100%;max-height:88vh;overflow-y:auto;display:flex;flex-direction:column;gap:8px;
+    background:linear-gradient(180deg,#0f3a8c,#08214f);border:1px solid var(--line);
+    border-radius:20px;padding:16px;
+  }
+  #setting h2{font-size:18px}
+  #setting .desc{font-size:12px;color:var(--sub);line-height:1.6}
+  #setting label{font-size:14px;font-weight:bold;margin-top:6px}
+  .vrow{display:flex;gap:6px}
+  .vrow select{
+    flex:1;min-width:0;height:44px;border-radius:12px;padding:0 10px;font-size:15px;color:#fff;
+    background:rgba(255,255,255,.08);border:1px solid var(--line);
+  }
+  .vrow select option{color:#000}
+  .vrow button{
+    width:52px;height:44px;flex-shrink:0;border:none;border-radius:12px;font-size:16px;
+    background:linear-gradient(135deg,#2a8cff,#0b52d6);
+  }
+  #rate{width:100%;accent-color:var(--cyan)}
+  #setting button.main{
+    margin-top:8px;height:46px;border:none;border-radius:14px;font-size:16px;font-weight:bold;
+    background:linear-gradient(135deg,#2a8cff,#0b52d6);
+  }
+
   /* ===== フレーズの編集画面 ===== */
   #phEdit{
     position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;
@@ -269,6 +299,7 @@
   </div>
   <button class="round" id="ttsBtn" title="読み上げ ON/OFF"><svg><use href="#i-vol"/></svg></button>
   <button class="round" id="clearBtn" title="履歴を消す"><svg><use href="#i-trash"/></svg></button>
+  <button class="round" id="setBtn" title="声の設定">⚙</button>
   <button class="round" id="helpBtn" title="使い方" style="font-weight:bold">?</button>
 </header>
 
@@ -344,6 +375,32 @@
   </div>
 </div>
 
+<!-- ===== 声の設定 ===== -->
+<div id="setting">
+  <div class="box">
+    <h2>⚙ 声の設定</h2>
+    <p class="desc">スマホに入っている声から選べます。▶で試し聞き。</p>
+
+    <label>🇯🇵 日本語の声</label>
+    <div class="vrow">
+      <select id="vJa"></select>
+      <button id="tJa">▶</button>
+    </div>
+
+    <label id="vGuestLabel">相手の言葉の声</label>
+    <div class="vrow">
+      <select id="vGuest"></select>
+      <button id="tGuest">▶</button>
+    </div>
+
+    <label>読み上げの速さ：<span id="rateVal"></span></label>
+    <input id="rate" type="range" min="0.6" max="1.4" step="0.05">
+
+    <p class="desc">※男性・女性の区別はスマホが教えてくれないので、名前で選んで▶で確かめてください。<br>※声の種類を増やしたいときは、iPhoneの「設定」→「アクセシビリティ」→「リーダーと読み上げ」の中の「声」から追加できる場合があります（追加後はアプリを開き直す）。</p>
+    <button id="setClose" class="main">閉じる</button>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <!-- ===== 使い方 ===== -->
@@ -357,7 +414,7 @@
       <li>下の入力欄は<b>何語でもOK</b>。日本語なら相手の言葉へ、外国語なら日本語へ自動で翻訳します</li>
       <li>よく使う言葉は<b>フレーズ</b>をタップするだけ。自分が話した・入力した日本語は、吹き出しの<b>☆</b>でフレーズに追加できます。フレーズ欄の右端の<b>✏️編集</b>で書き換え・並べ替え・削除</li>
     </ol>
-    <p class="note">🔊（吹き出しの中）：もう一度読み上げ<br>⛶：大きく表示して相手に見せる（🔄でさかさまにして対面で見せられます）<br>🗑：会話履歴を消す</p>
+    <p class="note">🔊（吹き出しの中）：もう一度読み上げ<br>⛶：大きく表示して相手に見せる（🔄でさかさまにして対面で見せられます）<br>🗑：会話を消す（アプリを開き直しても消えます）<br>⚙：声の種類と読み上げの速さ</p>
     <p class="note">※「自動判定」は文字入力のときに働きます。声で話すときは、選んだ言語（自動のときは最後に判定した言語）で聞き取ります。<br>※翻訳には通信が必要です。機械翻訳なので、短い文で区切ると伝わりやすいです。<br>※ネパール語は、スマホにネパール語の声がなければヒンディー語の声で読み上げます。</p>
     <button id="helpClose">閉じる</button>
   </div>
@@ -438,10 +495,15 @@ if(!LANGS[guestLang]) guestLang = 'en';
 if(guestSel !== 'auto') guestLang = guestSel;
 let ttsOn = load('hk_tts', '1') === '1';
 
-// 会話履歴
+// 会話履歴（スマホには保存しない：開き直すと消える）
 let history = [];
-try{ history = JSON.parse(load('hk_hist', '[]')) || []; }catch(e){ history = []; }
-function saveHistory(){ save('hk_hist', JSON.stringify(history.slice(-HISTORY_MAX))); }
+try{ localStorage.removeItem('hk_hist'); }catch(e){}   // 前の版で保存した履歴を消しておく
+function saveHistory(){ history = history.slice(-HISTORY_MAX); }
+
+// 声の設定（言語ごとに選んだ声の名前・読み上げの速さ）
+let voicePref = {};
+try{ voicePref = JSON.parse(load('hk_voices', '{}')) || {}; }catch(e){ voicePref = {}; }
+let ttsRate = parseFloat(load('hk_rate', '0.95')) || 0.95;
 
 /* ==================================================
    言語の選択欄
@@ -609,12 +671,20 @@ function loadVoices(){ if(window.speechSynthesis) voices = speechSynthesis.getVo
 loadVoices();
 if(window.speechSynthesis) speechSynthesis.onvoiceschanged = loadVoices;
 
-// 言語に合う声を探す（完全一致 → 言語だけ一致の順）
-function pickVoice(lang){
+// その言語の声の一覧（地域まで一致する声があればそれだけ、なければ言語だけ一致）
+function voicesFor(lang){
   const norm = v => v.lang.replace('_','-').toLowerCase();
   const want = lang.toLowerCase();
-  return voices.find(v => norm(v) === want)
-      || voices.find(v => norm(v).startsWith(want.split('-')[0]));
+  const exact = voices.filter(v => norm(v) === want);
+  if(exact.length) return exact;
+  return voices.filter(v => norm(v).startsWith(want.split('-')[0]));
+}
+
+// 言語に合う声を選ぶ（設定で選んだ声があればそれを優先）
+function pickVoice(lang){
+  const list = voicesFor(lang);
+  const chosen = voicePref[lang];
+  return (chosen && list.find(v => v.name === chosen)) || list.find(v => v.default) || list[0];
 }
 
 function speak(text, lang, force){
@@ -622,7 +692,7 @@ function speak(text, lang, force){
   speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
   u.lang = lang;
-  u.rate = 0.95;                 // 少しゆっくりめ
+  u.rate = ttsRate;              // 設定した速さ
   let v = pickVoice(lang);
   // その言語の声がなければ、代わりの声を探す
   if(!v && TTS_FALLBACK[lang]){
@@ -1007,6 +1077,71 @@ $('bigFlip').addEventListener('click', () => {
   bigFlip = !bigFlip; save('hk_flip', bigFlip ? '1' : '0');
   $('big').classList.toggle('flip', bigFlip);
 });
+
+/* ==================================================
+   声の設定
+   ================================================== */
+// 相手の言葉の読み上げに使う言語コード（声がなければ代わりの言語）
+function guestTtsCode(){
+  const sr = LANGS[guestLang].sr;
+  if(voices.length && !voicesFor(sr).length && TTS_FALLBACK[sr]) return TTS_FALLBACK[sr];
+  return sr;
+}
+
+// 選択欄に声の一覧を入れる
+function fillVoiceSelect(sel, code){
+  sel.innerHTML = '';
+  const auto = document.createElement('option');
+  auto.value = ''; auto.textContent = 'おまかせ';
+  sel.appendChild(auto);
+  for(const v of voicesFor(code)){
+    const op = document.createElement('option');
+    op.value = v.name;
+    op.textContent = v.name + (v.localService === false ? '（ネット）' : '');
+    sel.appendChild(op);
+  }
+  sel.value = voicePref[code] || '';
+  sel.dataset.code = code;
+  if(sel.options.length === 1){
+    sel.options[0].textContent = 'このスマホに声がありません';
+  }
+}
+
+function openSetting(){
+  loadVoices();
+  const l = LANGS[guestLang];
+  fillVoiceSelect($('vJa'), 'ja-JP');
+  const gc = guestTtsCode();
+  fillVoiceSelect($('vGuest'), gc);
+  $('vGuestLabel').textContent = `${l.flag} ${l.name}の声` + (gc !== l.sr ? '（ヒンディー語の声で代用）' : '');
+  $('rate').value = ttsRate;
+  $('rateVal').textContent = ttsRate.toFixed(2) + '倍';
+  $('setting').classList.add('on');
+}
+
+// 声を選んだら保存
+['vJa','vGuest'].forEach(id => {
+  $(id).addEventListener('change', e => {
+    const sel = e.target;
+    if(sel.value) voicePref[sel.dataset.code] = sel.value;
+    else delete voicePref[sel.dataset.code];
+    save('hk_voices', JSON.stringify(voicePref));
+  });
+});
+
+// 試し聞き
+$('tJa').addEventListener('click', () => { unlockTTS(); speak('こんにちは。ほんやくくんです。', 'ja-JP', true); });
+$('tGuest').addEventListener('click', () => { unlockTTS(); speak(LANGS[guestLang].hint, LANGS[guestLang].sr, true); });
+
+// 速さ
+$('rate').addEventListener('input', e => {
+  ttsRate = parseFloat(e.target.value);
+  $('rateVal').textContent = ttsRate.toFixed(2) + '倍';
+  save('hk_rate', String(ttsRate));
+});
+
+$('setBtn').addEventListener('click', openSetting);
+$('setClose').addEventListener('click', () => $('setting').classList.remove('on'));
 
 /* ==================================================
    上のボタン
