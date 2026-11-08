@@ -476,7 +476,7 @@
       <li>よく使う言葉は<b>フレーズ</b>をタップするだけ。自分が話した・入力した日本語は、吹き出しの<b>☆</b>でフレーズに追加できます。フレーズ欄の右端の<b>✏️編集</b>で書き換え・並べ替え・削除</li>
     </ol>
     <p class="note">🔊（吹き出しの中）：もう一度読み上げ<br>⛶：大きく表示して相手に見せる（🔄でさかさまにして対面で見せられます）<br>Aa：文字の大きさ（普通・大・特大）<br>⚙：読み上げの速さ・アプリの共有（LINE・QRコード）<br>フレーズの右上の点：翻訳を覚えていて、すぐ出せる・圏外でも使える印<br>⬇：会話の一番上で下に引っぱって離すと、会話を消して更新します</p>
-    <p class="note">※「自動判定」は文字入力のときに働きます。声で話すときは、選んだ言語（自動のときは最後に判定した言語）で聞き取ります。<br>※翻訳には通信が必要です。機械翻訳なので、短い文で区切ると伝わりやすいです。<br>※ネパール語は、スマホにネパール語の声がなければヒンディー語の声で読み上げます。</p>
+    <p class="note">※「🌐 自動判定」のとき、相手の水色ボタンは録音して<b>声から何語かを判定</b>します（有料のAIを使用）。言語を選んでいるときは、今まで通り無料で聞き取ります。<br>※翻訳には通信が必要です。機械翻訳なので、短い文で区切ると伝わりやすいです。<br>※ネパール語は、スマホにネパール語の声がなければヒンディー語の声で読み上げます。</p>
     <button id="helpClose">閉じる</button>
   </div>
 </div>
@@ -602,8 +602,14 @@ function setGuestLang(code){
 // 相手側の表示を、今の言語に合わせる
 function refreshGuestUI(){
   const l = LANGS[guestLang];
-  $('guestMicLabel').textContent = `${l.flag} ${l.speak}`;
-  $('guestMicSub').textContent = `相手が話す・${l.name}`;
+  if(guestSel === 'auto'){
+    // 自動判定：相手が何語で話しても、録音して言語を判定する
+    $('guestMicLabel').textContent = '🌐 Speak';
+    $('guestMicSub').textContent = '相手が話す・言語を自動判定';
+  }else{
+    $('guestMicLabel').textContent = `${l.flag} ${l.speak}`;
+    $('guestMicSub').textContent = `相手が話す・${l.name}`;
+  }
   $('emptyHint').textContent = l.hint;
   $('autoNote').textContent = (guestSel === 'auto')
     ? `自動判定中（今は ${l.flag} ${l.name}）`
@@ -807,10 +813,10 @@ function refreshEmpty(){
 }
 
 // 翻訳結果の読み上げに使う言語コード
-function ttsLangOf(msg){ return msg.side === 'me' ? LANGS[msg.lang].sr : 'ja-JP'; }
+function ttsLangOf(msg){ return msg.side === 'me' ? (LANGS[msg.lang] || LANGS.en).sr : 'ja-JP'; }
 
 function renderMsg(msg){
-  const l = LANGS[msg.lang] || LANGS.en;
+  const l = LANGS[msg.lang] || {flag:'🌐', name:'その他の言語', sr:'en-US'};
   const el = document.createElement('div');
   el.className = 'msg ' + msg.side + (msg.err ? ' err' : '');
   const who = document.createElement('div');
@@ -1218,7 +1224,172 @@ function startListen(side){
 }
 
 $('meMic').addEventListener('click',    () => startListen('me'));
-$('guestMic').addEventListener('click', () => startListen('guest'));
+$('guestMic').addEventListener('click', () => {
+  if(guestSel === 'auto') startAutoRecord();   // 自動判定：録音して言語を判定（有料のAIを使う）
+  else startListen('guest');                   // 言語を選んでいる：今まで通り（無料）
+});
+
+/* ==================================================
+   声で言語を自動判定（自動判定のときの相手のマイク）
+   録音 → GAS → OpenAI（文字にして言語を判定）→ Google翻訳で日本語に
+   話し終わって静かになったら自動で録音を止める。もう一度押しても止まる。
+   iPhone（iOS 14.3以降のSafari）・Android（Chrome）の標準の録音機能を使う。
+   ================================================== */
+const REC_MAX_MS     = 15000;   // 最長15秒
+const REC_SILENCE_MS = 1300;    // 話し終わってから1.3秒静かなら止める
+const REC_LEVEL      = 0.03;    // これより大きい音を「声」とみなす
+let autoRec = null;             // 録音中の情報
+
+function pickRecMime(){
+  // Androidはwebm、iPhoneはmp4で録音できる
+  if(window.MediaRecorder && MediaRecorder.isTypeSupported){
+    if(MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) return {mime:'audio/webm;codecs=opus', ext:'webm'};
+    if(MediaRecorder.isTypeSupported('audio/webm')) return {mime:'audio/webm', ext:'webm'};
+    if(MediaRecorder.isTypeSupported('audio/mp4'))  return {mime:'audio/mp4',  ext:'mp4'};
+  }
+  return {mime:'', ext:'mp4'};
+}
+
+function stopAutoRecord(){
+  if(autoRec && autoRec.recorder.state === 'recording') autoRec.recorder.stop();
+}
+
+async function startAutoRecord(){
+  unlockTTS();
+  // 録音中にもう一度押したら止める
+  if(autoRec){ stopAutoRecord(); return; }
+  stopListening();
+  if(!window.MediaRecorder || !navigator.mediaDevices){
+    toast('このスマホでは録音できません。言語を選んで話してもらってください');
+    return;
+  }
+  if(window.speechSynthesis) speechSynthesis.cancel();
+
+  let stream;
+  try{
+    stream = await navigator.mediaDevices.getUserMedia({audio:true});
+  }catch(e){
+    toast('マイクが許可されていません。設定でマイクを許可してください');
+    return;
+  }
+
+  const fmt = pickRecMime();
+  const recorder = fmt.mime ? new MediaRecorder(stream, {mimeType:fmt.mime}) : new MediaRecorder(stream);
+  const chunks = [];
+  autoRec = {recorder, stream, ctx:null, timer:null, maxTimer:null};
+
+  // 音の大きさを見て、話し終わりを見つける
+  let heard = false, lastLoud = Date.now();
+  try{
+    const AC = window.AudioContext || window.webkitAudioContext;
+    const ctx = new AC();
+    if(ctx.resume) ctx.resume();   // iPhoneは止まった状態で始まることがあるので動かす
+    const src = ctx.createMediaStreamSource(stream);
+    const an = ctx.createAnalyser();
+    an.fftSize = 1024;
+    src.connect(an);
+    autoRec.ctx = ctx;
+    const buf = new Float32Array(an.fftSize);
+    autoRec.timer = setInterval(() => {
+      an.getFloatTimeDomainData(buf);
+      let sum = 0;
+      for(let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
+      const level = Math.sqrt(sum / buf.length);
+      if(level > REC_LEVEL){ heard = true; lastLoud = Date.now(); }
+      if(heard && Date.now() - lastLoud > REC_SILENCE_MS) stopAutoRecord();
+    }, 100);
+  }catch(e){ /* 音の大きさが取れない端末は、押して止めるか15秒で止まる */ }
+  autoRec.maxTimer = setTimeout(stopAutoRecord, REC_MAX_MS);   // 最長でも15秒で止める
+
+  recorder.ondataavailable = e => { if(e.data && e.data.size) chunks.push(e.data); };
+  recorder.onstop = async () => {
+    // 後片付け
+    clearInterval(autoRec.timer);
+    clearTimeout(autoRec.maxTimer);
+    try{ autoRec.ctx && autoRec.ctx.close(); }catch(e){}
+    stream.getTracks().forEach(t => t.stop());
+    autoRec = null;
+    $('guestMic').classList.remove('listening');
+
+    const blob = new Blob(chunks, {type: fmt.mime || 'audio/mp4'});
+    if(!heard && blob.size < 2000){ showLive(false); toast('声が聞き取れませんでした。もう一度どうぞ'); return; }
+    $('liveTitle').textContent = '🌐 何語か判定しています…';
+    $('liveText').textContent = '';
+    try{
+      const r = await identifyAndTranslate(blob, fmt.ext);
+      showLive(false);
+      handleDetected(r);
+    }catch(err){
+      showLive(false);
+      toast(err.message || '判定できませんでした');
+    }
+  };
+
+  recorder.start();
+  $('guestMic').classList.add('listening');
+  showLive(true, 'guest');
+  $('liveTitle').textContent = '🌐 Please speak… 🎙';
+  $('liveText').textContent = '（録音中。話し終わると自動で止まります。もう一度押しても止まります）';
+}
+
+// 録音をGASへ送る（文字にする・言語判定・日本語訳までGASでまとめて行う）
+async function identifyAndTranslate(blob, ext){
+  if(!navigator.onLine) throw new Error('オフラインです。電波のある所で使ってください');
+  const b64 = await new Promise((ok, ng) => {
+    const fr = new FileReader();
+    fr.onload = () => ok(String(fr.result).split(',')[1]);
+    fr.onerror = ng;
+    fr.readAsDataURL(blob);
+  });
+  const res = await fetch(GAS_URL, {
+    method:'POST',
+    // text/plain で送ると、GASとの通信で余計な確認が入らない
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body: JSON.stringify({type:'stt', audio:b64, mime:blob.type, ext})
+  });
+  let data;
+  try{ data = await res.json(); }catch(e){ throw new Error('自動判定の準備ができていません（GASの更新が必要）'); }
+  if(data.error) throw new Error('判定できませんでした（' + data.error + '）');
+  if(!data.text) throw new Error('声が聞き取れませんでした。もう一度どうぞ');
+  return data;   // {text:話した文, lang:言語コード, ja:日本語訳}
+}
+
+// 判定した言語コード（'ko' 'zh-TW' など）を、このアプリの言語に直す
+function mapLangCode(code, text){
+  code = String(code || '').toLowerCase();
+  const base = code.split(/[-_]/)[0];
+  if(base === 'ja') return 'ja';
+  if(base === 'zh'){
+    if(/tw|hant|hk/.test(code)) return 'tw';
+    const d = detectLang(text);                    // 文字の形で簡体・繁体を見分ける
+    return (d === 'tw') ? 'tw' : 'zh';
+  }
+  if(LANGS[base]) return base;
+  // 言語コードが返ってこないときは、文字の種類から推測する
+  if(!code){ const d = detectLang(text); return LANGS[d] || d === 'ja' ? d : null; }
+  return null;   // このアプリにない言語
+}
+
+function handleDetected(r){
+  const code = mapLangCode(r.lang, r.text);
+  if(code === 'ja'){                               // 日本語だった
+    handleText(r.text, 'me');
+    return;
+  }
+  if(code){
+    setGuestLang(code);                            // 次からこの言語で返事する
+    const l = LANGS[code];
+    toast(`${l.flag} ${l.name}と判定しました`);
+  }else{
+    toast('このアプリにない言語でした（' + (r.lang || '不明') + '）。日本語訳だけ出します');
+  }
+  // 吹き出しを出す（日本語訳はGASで済んでいるので、そのまま表示）
+  const msg = {side:'guest', lang: code || 'xx', orig:r.text, trans:r.ja || '（翻訳できませんでした）'};
+  const el = renderMsg(msg);
+  updateTools(el);
+  history.push(msg); saveHistory();
+  speak(msg.trans, 'ja-JP');
+}
 
 /* ==================================================
    定型フレーズ
