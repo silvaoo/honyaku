@@ -177,13 +177,6 @@
   /* 速さのバー（指で動かしやすいよう上下に余白をとる） */
   #setting .chk{display:flex;align-items:center;gap:8px;font-weight:normal;font-size:13px;margin-top:8px}
   #setting .chk input{width:20px;height:20px;accent-color:var(--cyan)}
-  /* 声の高さボタン（選んでいるものを光らせる） */
-  .pitchRow{display:flex;gap:6px}
-  .pitchRow button{
-    flex:1;height:44px;border-radius:12px;font-size:15px;font-weight:bold;
-    background:var(--glass);border:1px solid var(--line);
-  }
-  .pitchRow button.on{border:none;background:linear-gradient(135deg,#2a8cff,#0b52d6);box-shadow:0 0 12px rgba(42,140,255,.6)}
   #rate{width:100%;height:36px;margin:6px 0 0;accent-color:var(--cyan)}
   .rateScale{
     display:flex;justify-content:space-between;align-items:center;
@@ -320,7 +313,6 @@
     <p>世界と繋がるポケット通訳</p>
   </div>
   <button class="round" id="ttsBtn" title="読み上げ ON/OFF"><svg><use href="#i-vol"/></svg></button>
-  <button class="round" id="clearBtn" title="履歴を消す"><svg><use href="#i-trash"/></svg></button>
   <button class="round" id="setBtn" title="読み上げの設定">⚙</button>
   <button class="round" id="helpBtn" title="使い方" style="font-weight:bold">?</button>
 </header>
@@ -412,13 +404,6 @@
     </div>
     <button id="rateReset" style="height:40px;border-radius:12px;border:1px solid var(--line);background:var(--glass);font-size:14px">標準の速さに戻す</button>
 
-    <label>声の高さ</label>
-    <div class="pitchRow">
-      <button data-p="1.35">高め</button>
-      <button data-p="1">普通</button>
-      <button data-p="0.65">低め</button>
-    </div>
-    <p class="desc">※押すと日本語で試し読みします。声そのものは変わらず、高さだけが変わります。</p>
 
     <button id="setClose" class="main">閉じる</button>
   </div>
@@ -437,7 +422,7 @@
       <li>下の入力欄は<b>何語でもOK</b>。日本語なら相手の言葉へ、外国語なら日本語へ自動で翻訳します</li>
       <li>よく使う言葉は<b>フレーズ</b>をタップするだけ。自分が話した・入力した日本語は、吹き出しの<b>☆</b>でフレーズに追加できます。フレーズ欄の右端の<b>✏️編集</b>で書き換え・並べ替え・削除</li>
     </ol>
-    <p class="note">🔊（吹き出しの中）：もう一度読み上げ<br>⛶：大きく表示して相手に見せる（🔄でさかさまにして対面で見せられます）<br>🗑：会話を消す（アプリを開き直しても消えます）<br>⚙：読み上げの速さ<br>⬇：会話の一番上で下に引っぱって離すと、会話を消して更新します</p>
+    <p class="note">🔊（吹き出しの中）：もう一度読み上げ<br>⛶：大きく表示して相手に見せる（🔄でさかさまにして対面で見せられます）<br>⚙：読み上げの速さ<br>⬇：会話の一番上で下に引っぱって離すと、会話を消して更新します</p>
     <p class="note">※「自動判定」は文字入力のときに働きます。声で話すときは、選んだ言語（自動のときは最後に判定した言語）で聞き取ります。<br>※翻訳には通信が必要です。機械翻訳なので、短い文で区切ると伝わりやすいです。<br>※ネパール語は、スマホにネパール語の声がなければヒンディー語の声で読み上げます。</p>
     <button id="helpClose">閉じる</button>
   </div>
@@ -526,8 +511,7 @@ function saveHistory(){ history = history.slice(-HISTORY_MAX); }
 // 読み上げの速さ
 try{ localStorage.removeItem('hk_voices'); }catch(e){}   // 前の版の「声の選択」は使わないので消す
 let ttsRate = parseFloat(load('hk_rate', '0.95')) || 0.95;
-// 読み上げの声の高さ（1が普通。小さいほど低い声）
-let ttsPitch = parseFloat(load('hk_pitch', '1')) || 1;
+try{ localStorage.removeItem('hk_pitch'); }catch(e){}   // 声の高さ機能は廃止
 try{ localStorage.removeItem('hk_voice2'); localStorage.removeItem('hk_voice3'); }catch(e){}   // 前の版の声の選択は使わないので消す
 
 /* ==================================================
@@ -730,7 +714,6 @@ function speak(text, lang, force){
   const u = new SpeechSynthesisUtterance(text);
   u.lang = lang;
   u.rate = ttsRate;              // 設定した速さ
-  u.pitch = ttsPitch;            // 設定した声の高さ
   let v = pickVoice(lang);
   // その言語の声がなければ、代わりの声を探す
   if(!v && TTS_FALLBACK[lang]){
@@ -1175,18 +1158,6 @@ function setRate(r){
 }
 $('rate').addEventListener('input', e => setRate(parseFloat(e.target.value)));
 $('rateReset').addEventListener('click', () => setRate(0.95));
-
-// 声の高さ：選んだボタンを光らせる
-function refreshPitch(){
-  document.querySelectorAll('.pitchRow button').forEach(b => {
-    b.classList.toggle('on', parseFloat(b.dataset.p) === ttsPitch);
-  });
-}
-document.querySelectorAll('.pitchRow button').forEach(b => {
-  b.addEventListener('click', () => {
-    ttsPitch = parseFloat(b.dataset.p);
-    save('hk_pitch', String(ttsPitch));
-    refreshPitch();
     unlockTTS();
     speak('こんにちは。ほんやくくんです。', 'ja-JP', true);   // すぐ試し読み
   });
@@ -1207,12 +1178,6 @@ ttsBtn.addEventListener('click', () => {
   toast(ttsOn ? '自動読み上げ ON' : '自動読み上げ OFF');
 });
 
-$('clearBtn').addEventListener('click', () => {
-  if(!confirm('会話履歴をすべて消しますか？')) return;
-  history = []; saveHistory();
-  logEl.querySelectorAll('.msg').forEach(el => el.remove());
-  refreshEmpty();
-});
 
 $('helpBtn').addEventListener('click',  () => $('help').style.display = 'flex');
 $('helpClose').addEventListener('click',() => $('help').style.display = 'none');
