@@ -97,6 +97,12 @@
     background:linear-gradient(135deg,#2a8cff,#0b4fd0);
     box-shadow:0 4px 16px rgba(20,100,255,.35);
   }
+  /* 引っぱって消す（リロード）の表示 */
+  #ptr{
+    height:0;overflow:hidden;text-align:center;font-size:13px;color:var(--cyan);
+    display:flex;align-items:flex-end;justify-content:center;flex-shrink:0;
+  }
+  #ptr.ready{color:#fff;font-weight:bold}
   .msg.guest{
     align-self:flex-start;border-bottom-left-radius:6px;
     background:rgba(255,255,255,.09);border:1px solid var(--line);
@@ -312,6 +318,7 @@
 <div id="autoNote"></div>
 
 <!-- ===== 会話履歴 ===== -->
+<div id="ptr"><span id="ptrText"></span></div>
 <div id="log">
   <div id="empty">
     <div class="orb">🌏</div>
@@ -405,7 +412,7 @@
       <li>下の入力欄は<b>何語でもOK</b>。日本語なら相手の言葉へ、外国語なら日本語へ自動で翻訳します</li>
       <li>よく使う言葉は<b>フレーズ</b>をタップするだけ。自分が話した・入力した日本語は、吹き出しの<b>☆</b>でフレーズに追加できます。フレーズ欄の右端の<b>✏️編集</b>で書き換え・並べ替え・削除</li>
     </ol>
-    <p class="note">🔊（吹き出しの中）：もう一度読み上げ<br>⛶：大きく表示して相手に見せる（🔄でさかさまにして対面で見せられます）<br>🗑：会話を消す（アプリを開き直しても消えます）<br>⚙：読み上げの速さ</p>
+    <p class="note">🔊（吹き出しの中）：もう一度読み上げ<br>⛶：大きく表示して相手に見せる（🔄でさかさまにして対面で見せられます）<br>🗑：会話を消す（アプリを開き直しても消えます）<br>⚙：読み上げの速さ<br>⬇：会話の一番上で下に引っぱって離すと、会話を消して更新します</p>
     <p class="note">※「自動判定」は文字入力のときに働きます。声で話すときは、選んだ言語（自動のときは最後に判定した言語）で聞き取ります。<br>※翻訳には通信が必要です。機械翻訳なので、短い文で区切ると伝わりやすいです。<br>※ネパール語は、スマホにネパール語の声がなければヒンディー語の声で読み上げます。</p>
     <button id="helpClose">閉じる</button>
   </div>
@@ -885,6 +892,41 @@ $('phDone').addEventListener('click', () => {
   refreshStars();
   $('phEdit').classList.remove('on');
   toast('フレーズを保存しました');
+});
+
+/* ==================================================
+   会話の一番上で下に引っぱる → リロード（会話が消える）
+   ================================================== */
+const PTR_LIMIT = 110;   // これ以上引っぱって離すとリロード（うっかり防止で長め）
+let ptrStartY = null, ptrDist = 0;
+const ptr = $('ptr'), ptrText = $('ptrText');
+
+logEl.addEventListener('touchstart', e => {
+  // 一番上までスクロールしているときだけ反応する
+  ptrStartY = (logEl.scrollTop <= 0) ? e.touches[0].clientY : null;
+  ptrDist = 0;
+}, {passive:true});
+
+logEl.addEventListener('touchmove', e => {
+  if(ptrStartY === null) return;
+  ptrDist = e.touches[0].clientY - ptrStartY;
+  if(ptrDist <= 0){ ptr.style.height = '0px'; return; }
+  const h = Math.min(ptrDist * 0.5, 70);   // 引っぱった分だけ表示を伸ばす
+  ptr.style.height = h + 'px';
+  const ready = ptrDist >= PTR_LIMIT;
+  ptr.classList.toggle('ready', ready);
+  ptrText.textContent = ready ? '↻ 離すと会話を消します' : '⬇ 引っぱると会話を消します';
+}, {passive:true});
+
+logEl.addEventListener('touchend', () => {
+  if(ptrStartY !== null && ptrDist >= PTR_LIMIT){
+    ptrText.textContent = '↻ 更新中…';
+    location.reload();   // リロード（会話が消え、アプリの更新もここで反映）
+    return;
+  }
+  ptr.style.height = '0px';
+  ptr.classList.remove('ready');
+  ptrStartY = null; ptrDist = 0;
 });
 
 // 保存されている履歴を表示
