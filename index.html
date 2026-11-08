@@ -397,10 +397,18 @@
     <label>読み上げの速さ</label>
     <input id="rate" type="range" min="0.6" max="1.4" step="0.05">
     <div class="rateScale"><span>ゆっくり</span><b id="rateVal"></b><span>はやい</span></div>
+    <label>🇯🇵 日本語の声</label>
     <div class="vrow">
-      <button id="tJa" style="flex:1;width:auto">▶ 日本語で試す</button>
-      <button id="tGuest" style="flex:1;width:auto">▶ 相手の言葉で試す</button>
+      <select id="vJa"></select>
+      <button id="tJa">▶</button>
     </div>
+
+    <label id="vGuestLabel">相手の言葉の声</label>
+    <div class="vrow">
+      <select id="vGuest"></select>
+      <button id="tGuest">▶</button>
+    </div>
+    <p class="desc">※選べるのはスマホに入っている人の声だけです。iPhoneの「リーダーと読み上げ」→「声」で追加した声は、アプリを開き直すと一覧に出ます。</p>
     <button id="rateReset" style="height:40px;border-radius:12px;border:1px solid var(--line);background:var(--glass);font-size:14px">標準の速さに戻す</button>
 
     <button id="setClose" class="main">閉じる</button>
@@ -509,6 +517,9 @@ function saveHistory(){ history = history.slice(-HISTORY_MAX); }
 // 読み上げの速さ
 try{ localStorage.removeItem('hk_voices'); }catch(e){}   // 前の版の「声の選択」は使わないので消す
 let ttsRate = parseFloat(load('hk_rate', '0.95')) || 0.95;
+// 言語ごとに選んだ声の名前（例：{'ja-JP':'Otoya'}）
+let voicePref = {};
+try{ voicePref = JSON.parse(load('hk_voice2', '{}')) || {}; }catch(e){ voicePref = {}; }
 
 /* ==================================================
    言語の選択欄
@@ -691,11 +702,32 @@ function isNovelty(v){
 }
 
 // 言語に合う声を選ぶ（人の声を優先。スマホの標準の声 → 最初の声の順）
-function pickVoice(lang){
+// その言語の「人の声」だけの一覧（効果音系の声がなければ全部）
+function humanVoicesFor(lang){
   const all = voicesFor(lang);
   const human = all.filter(v => !isNovelty(v));
-  const list = human.length ? human : all;
-  return list.find(v => v.default) || list[0];
+  return human.length ? human : all;
+}
+
+function pickVoice(lang){
+  const list = humanVoicesFor(lang);
+  // 設定画面で選んだ声があれば、それを使う
+  const chosen = voicePref[lang];
+  return (chosen && list.find(v => v.name === chosen)) || list.find(v => v.default) || list[0];
+}
+
+// よく知られた声の名前 → 男性・女性（ここにない声は印なし）
+const VOICE_GENDER = {
+  'kyoko':'女性', 'o-ren':'女性', 'otoya':'男性', 'hattori':'男性',
+  'samantha':'女性', 'karen':'女性', 'moira':'女性', 'tessa':'女性', 'nicky':'女性', 'martha':'女性', 'catherine':'女性', 'ava':'女性', 'allison':'女性', 'susan':'女性', 'zoe':'女性',
+  'alex':'男性', 'daniel':'男性', 'aaron':'男性', 'arthur':'男性', 'fred':'男性', 'rishi':'男性', 'gordon':'男性', 'tom':'男性', 'evan':'男性', 'nathan':'男性',
+};
+// 声の表示名（例：「Otoya（男性）」）
+function voiceLabel(v){
+  // 「Otoya (Enhanced)」なども Otoya として性別を調べる
+  const key = v.name.toLowerCase().replace(/\s*[\(（].*$/, '').trim();
+  const g = VOICE_GENDER[key];
+  return v.name + (g ? `（${g}）` : '');
 }
 
 function speak(text, lang, force){
@@ -1127,10 +1159,50 @@ $('bigFlip').addEventListener('click', () => {
 /* ==================================================
    声の設定
    ================================================== */
+// 相手の言葉の読み上げに使う言語コード（声がなければ代わりの言語：ネパール語→ヒンディー語）
+function guestTtsCode(){
+  const sr = LANGS[guestLang].sr;
+  if(voices.length && !voicesFor(sr).length && TTS_FALLBACK[sr]) return TTS_FALLBACK[sr];
+  return sr;
+}
+
+// 声の選択欄に一覧を入れる
+function fillVoiceSelect(sel, code){
+  sel.innerHTML = '';
+  const list = humanVoicesFor(code);
+  const std = document.createElement('option');
+  std.value = ''; std.textContent = list.length ? '標準' : 'このスマホに声がありません';
+  sel.appendChild(std);
+  for(const v of list){
+    const op = document.createElement('option');
+    op.value = v.name; op.textContent = voiceLabel(v);
+    sel.appendChild(op);
+  }
+  sel.value = (voicePref[code] && list.some(v => v.name === voicePref[code])) ? voicePref[code] : '';
+  sel.dataset.code = code;
+}
+
+// 声を選んだら保存して、すぐ試し聞き
+['vJa','vGuest'].forEach(id => {
+  $(id).addEventListener('change', e => {
+    const sel = e.target;
+    if(sel.value) voicePref[sel.dataset.code] = sel.value;
+    else delete voicePref[sel.dataset.code];
+    save('hk_voice2', JSON.stringify(voicePref));
+    $(id === 'vJa' ? 'tJa' : 'tGuest').click();
+  });
+});
+
 // 設定画面を開く
 function openSetting(){
+  loadVoices();
   $('rate').value = ttsRate;
   $('rateVal').textContent = ttsRate.toFixed(2) + '倍';
+  const l = LANGS[guestLang];
+  fillVoiceSelect($('vJa'), 'ja-JP');
+  const gc = guestTtsCode();
+  fillVoiceSelect($('vGuest'), gc);
+  $('vGuestLabel').textContent = `${l.flag} ${l.name}の声` + (gc !== l.sr ? '（ヒンディー語の声で代用）' : '');
   $('setting').classList.add('on');
 }
 
