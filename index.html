@@ -177,6 +177,13 @@
   /* 速さのバー（指で動かしやすいよう上下に余白をとる） */
   #setting .chk{display:flex;align-items:center;gap:8px;font-weight:normal;font-size:13px;margin-top:8px}
   #setting .chk input{width:20px;height:20px;accent-color:var(--cyan)}
+  /* 声の高さボタン（選んでいるものを光らせる） */
+  .pitchRow{display:flex;gap:6px}
+  .pitchRow button{
+    flex:1;height:44px;border-radius:12px;font-size:15px;font-weight:bold;
+    background:var(--glass);border:1px solid var(--line);
+  }
+  .pitchRow button.on{border:none;background:linear-gradient(135deg,#2a8cff,#0b52d6);box-shadow:0 0 12px rgba(42,140,255,.6)}
   #rate{width:100%;height:36px;margin:6px 0 0;accent-color:var(--cyan)}
   .rateScale{
     display:flex;justify-content:space-between;align-items:center;
@@ -405,6 +412,14 @@
     </div>
     <button id="rateReset" style="height:40px;border-radius:12px;border:1px solid var(--line);background:var(--glass);font-size:14px">標準の速さに戻す</button>
 
+    <label>声の高さ</label>
+    <div class="pitchRow">
+      <button data-p="1.35">高め</button>
+      <button data-p="1">普通</button>
+      <button data-p="0.65">低め</button>
+    </div>
+    <p class="desc">※押すと日本語で試し読みします。声そのものは変わらず、高さだけが変わります。</p>
+
     <button id="setClose" class="main">閉じる</button>
   </div>
 </div>
@@ -511,6 +526,8 @@ function saveHistory(){ history = history.slice(-HISTORY_MAX); }
 // 読み上げの速さ
 try{ localStorage.removeItem('hk_voices'); }catch(e){}   // 前の版の「声の選択」は使わないので消す
 let ttsRate = parseFloat(load('hk_rate', '0.95')) || 0.95;
+// 読み上げの声の高さ（1が普通。小さいほど低い声）
+let ttsPitch = parseFloat(load('hk_pitch', '1')) || 1;
 try{ localStorage.removeItem('hk_voice2'); localStorage.removeItem('hk_voice3'); }catch(e){}   // 前の版の声の選択は使わないので消す
 
 /* ==================================================
@@ -713,6 +730,7 @@ function speak(text, lang, force){
   const u = new SpeechSynthesisUtterance(text);
   u.lang = lang;
   u.rate = ttsRate;              // 設定した速さ
+  u.pitch = ttsPitch;            // 設定した声の高さ
   let v = pickVoice(lang);
   // その言語の声がなければ、代わりの声を探す
   if(!v && TTS_FALLBACK[lang]){
@@ -1157,6 +1175,23 @@ function setRate(r){
 }
 $('rate').addEventListener('input', e => setRate(parseFloat(e.target.value)));
 $('rateReset').addEventListener('click', () => setRate(0.95));
+
+// 声の高さ：選んだボタンを光らせる
+function refreshPitch(){
+  document.querySelectorAll('.pitchRow button').forEach(b => {
+    b.classList.toggle('on', parseFloat(b.dataset.p) === ttsPitch);
+  });
+}
+document.querySelectorAll('.pitchRow button').forEach(b => {
+  b.addEventListener('click', () => {
+    ttsPitch = parseFloat(b.dataset.p);
+    save('hk_pitch', String(ttsPitch));
+    refreshPitch();
+    unlockTTS();
+    speak('こんにちは。ほんやくくんです。', 'ja-JP', true);   // すぐ試し読み
+  });
+});
+refreshPitch();
 
 $('setBtn').addEventListener('click', openSetting);
 $('setClose').addEventListener('click', () => $('setting').classList.remove('on'));
