@@ -317,10 +317,11 @@
    設定
    ================================================== */
 
-// 翻訳エンジン：'mymemory'（設定不要） または 'gas'（Google Apps Script）
-const ENGINE = 'mymemory';
-// GASを使うときは、ここにGASのWebアプリURLを入れる
-const GAS_URL = '';
+// 翻訳エンジン：'gas'（Google翻訳） または 'mymemory'（予備）
+// 'gas' がつながらないときは、自動で 'mymemory' を使う
+const ENGINE = 'gas';
+// GAS（Google翻訳）のWebアプリURL
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbxeS-mCy1nrQe447Q6yqzNRgpdZ-6cjME6lMxmTwn-RLsi1iUVFrsw5z5K7kD5Njbig_w/exec';
 // MyMemoryにメールアドレスを渡すと1日の上限が増える（空でもOK）
 const MYMEMORY_EMAIL = '';
 
@@ -496,20 +497,44 @@ function toast(msg){
 /* ==================================================
    翻訳
    ================================================== */
+let gasWarned = false;   // 「予備に切り替えた」お知らせを1回だけ出す用
+
 async function translate(text, from, to){
   if(!navigator.onLine) throw new Error('オフラインです。電波のある所で使ってください');
 
-  if(ENGINE === 'gas'){
-    // --- Google Apps Script を使う場合 ---
-    const url = `${GAS_URL}?text=${encodeURIComponent(text)}&source=${from}&target=${to}`;
-    const res = await fetch(url);
-    if(!res.ok) throw new Error('翻訳サーバーにつながりません');
-    const data = await res.json();
-    if(!data.text) throw new Error('翻訳できませんでした');
-    return data.text;
+  if(ENGINE === 'gas' && GAS_URL){
+    try{
+      return await translateGAS(text, from, to);
+    }catch(err){
+      // Google翻訳がだめなら、予備のMyMemoryで続ける
+      if(!gasWarned){
+        toast('Google翻訳につながらないため、予備の翻訳を使っています');
+        gasWarned = true;
+      }
+    }
   }
+  return await translateMyMemory(text, from, to);
+}
 
-  // --- MyMemory を使う場合（初期設定） ---
+// --- Google翻訳（GAS） ---
+async function translateGAS(text, from, to){
+  const url = `${GAS_URL}?text=${encodeURIComponent(text)}&source=${encodeURIComponent(from)}&target=${encodeURIComponent(to)}`;
+  // 10秒で返事がなければあきらめる
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 10000);
+  try{
+    const res = await fetch(url, {signal:ctrl.signal});
+    if(!res.ok) throw new Error('GAS ' + res.status);
+    const data = await res.json();
+    if(data.error || !data.text) throw new Error(data.error || 'GAS empty');
+    return data.text;
+  }finally{
+    clearTimeout(timer);
+  }
+}
+
+// --- MyMemory（予備） ---
+async function translateMyMemory(text, from, to){
   let url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${encodeURIComponent(from + '|' + to)}`;
   if(MYMEMORY_EMAIL) url += `&de=${encodeURIComponent(MYMEMORY_EMAIL)}`;
   const res = await fetch(url);
