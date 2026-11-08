@@ -1,9 +1,9 @@
 // ===== ほんやくくん Service Worker =====
 // 中身を更新したら、この番号を上げる（v1 → v2 …）
-const CACHE = 'honyaku-v18';
+const CACHE = 'honyaku-v19';
 
 // 保存しておくファイル
-const FILES = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
+const FILES = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './apple-touch-icon.png', './qr.js'];
 
 // インストール時：ファイルを保存
 self.addEventListener('install', e => {
