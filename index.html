@@ -141,6 +141,40 @@
     flex-shrink:0;padding:8px 13px;border-radius:18px;font-size:14px;font-weight:bold;
     background:var(--glass);border:1px solid var(--line);
   }
+  .chip.edit{border-color:var(--cyan);color:var(--cyan)}   /* ✏️編集ボタン */
+
+  /* ===== フレーズの編集画面 ===== */
+  #phEdit{
+    position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;
+    align-items:center;justify-content:center;z-index:45;padding:16px;
+  }
+  #phEdit.on{display:flex}
+  #phEdit .box{
+    width:100%;max-height:88vh;display:flex;flex-direction:column;gap:10px;
+    background:linear-gradient(180deg,#0f3a8c,#08214f);border:1px solid var(--line);
+    border-radius:20px;padding:16px;
+  }
+  #phEdit h2{font-size:18px}
+  #phEdit .desc{font-size:12px;color:var(--sub)}
+  #phList{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:6px}
+  .phrow{display:flex;gap:4px;align-items:center}
+  .phrow input,#phNew{
+    flex:1;min-width:0;height:42px;border-radius:12px;padding:0 10px;font-size:15px;color:#fff;
+    background:rgba(255,255,255,.08);border:1px solid var(--line);outline:none;
+  }
+  .phrow button{
+    width:36px;height:42px;flex-shrink:0;border-radius:10px;font-size:15px;
+    background:rgba(255,255,255,.08);border:1px solid var(--line);
+  }
+  .phrow button.del{color:#ffb4b4}
+  .addrow{display:flex;gap:6px}
+  .addrow button{
+    padding:0 14px;height:42px;border:none;border-radius:12px;font-size:15px;font-weight:bold;
+    background:linear-gradient(135deg,#2a8cff,#0b52d6);
+  }
+  .phbtns{display:flex;gap:8px}
+  .phbtns button{flex:1;height:46px;border-radius:14px;font-size:15px;font-weight:bold;border:1px solid var(--line);background:var(--glass)}
+  .phbtns button.main{border:none;background:linear-gradient(135deg,#2a8cff,#0b52d6)}
 
   /* ===== 下の操作エリア ===== */
   .dock{padding:10px;display:flex;flex-direction:column;gap:10px}
@@ -293,6 +327,23 @@
   </div>
 </div>
 
+<!-- ===== フレーズの編集 ===== -->
+<div id="phEdit">
+  <div class="box">
+    <h2>✏️ フレーズの編集</h2>
+    <p class="desc">文字を直接書き換えられます。▲▼で並べ替え、🗑で削除。</p>
+    <div id="phList"></div>
+    <div class="addrow">
+      <input id="phNew" type="text" placeholder="新しいフレーズ（日本語）" enterkeyhint="done" autocomplete="off">
+      <button id="phAdd">追加</button>
+    </div>
+    <div class="phbtns">
+      <button id="phReset">最初の状態に戻す</button>
+      <button id="phDone" class="main">保存して閉じる</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <!-- ===== 使い方 ===== -->
@@ -304,7 +355,7 @@
       <li>青い「日本語」ボタンを押して話す → 相手の言葉に翻訳して読み上げ</li>
       <li>水色のボタンを相手に押して話してもらう → 日本語に翻訳して読み上げ</li>
       <li>下の入力欄は<b>何語でもOK</b>。日本語なら相手の言葉へ、外国語なら日本語へ自動で翻訳します</li>
-      <li>よく使う言葉は<b>フレーズ</b>をタップするだけ</li>
+      <li>よく使う言葉は<b>フレーズ</b>をタップするだけ。自分が話した・入力した日本語は、吹き出しの<b>☆</b>でフレーズに追加できます。フレーズ欄の右端の<b>✏️編集</b>で書き換え・並べ替え・削除</li>
     </ol>
     <p class="note">🔊（吹き出しの中）：もう一度読み上げ<br>⛶：大きく表示して相手に見せる（🔄でさかさまにして対面で見せられます）<br>🗑：会話履歴を消す</p>
     <p class="note">※「自動判定」は文字入力のときに働きます。声で話すときは、選んだ言語（自動のときは最後に判定した言語）で聞き取ります。<br>※翻訳には通信が必要です。機械翻訳なので、短い文で区切ると伝わりやすいです。<br>※ネパール語は、スマホにネパール語の声がなければヒンディー語の声で読み上げます。</p>
@@ -350,8 +401,8 @@ const LANGS = {
 // 声がない言語の代わりに使う声（ネパール語 → 同じ文字のヒンディー語）
 const TTS_FALLBACK = {'ne-NP':'hi-IN'};
 
-// 定型フレーズ（自由に書き換えてOK）
-const PHRASES = [
+// 最初から入っている定型フレーズ（アプリ上で編集した内容はスマホに保存される）
+const DEFAULT_PHRASES = [
   'こんにちは',
   'どちらまで行きますか？',
   'このバスで行けます',
@@ -648,7 +699,127 @@ function updateTools(el){
   bg.innerHTML = '<svg><use href="#i-big"/></svg>'; bg.title = '大きく表示';
   bg.addEventListener('click', () => openBig(msg));
   tools.append(sp, bg);
+  // 自分の日本語は ☆ でフレーズに追加できる（登録済みは ★）
+  if(msg.side === 'me'){
+    const st = document.createElement('button');
+    const saved = phrases.includes(msg.orig);
+    st.textContent = saved ? '★' : '☆';
+    st.title = 'フレーズに追加';
+    st.style.color = saved ? '#ffd54a' : '';
+    st.addEventListener('click', () => {
+      addPhrase(msg.orig);
+      refreshStars();
+    });
+    tools.append(st);
+  }
 }
+
+// 全部の吹き出しの ☆★ を最新にする
+function refreshStars(){
+  logEl.querySelectorAll('.msg.me').forEach(el => { if(el._msg) updateTools(el); });
+}
+
+/* ==================================================
+   フレーズ（スマホに保存。追加・編集できる）
+   ================================================== */
+let phrases = DEFAULT_PHRASES.slice();
+try{
+  const p = JSON.parse(load('hk_phrases', 'null'));
+  if(Array.isArray(p)) phrases = p;
+}catch(e){}
+function savePhrases(){ save('hk_phrases', JSON.stringify(phrases)); }
+
+// フレーズ欄を作り直す
+function renderPhrases(){
+  const box = $('phrases');
+  box.innerHTML = '';
+  phrases.forEach(p => {
+    const b = document.createElement('button');
+    b.className = 'chip'; b.textContent = p;
+    b.addEventListener('click', () => { unlockTTS(); handleText(p, 'me'); });
+    box.appendChild(b);
+  });
+  // 右端に「✏️ 編集」
+  const ed = document.createElement('button');
+  ed.className = 'chip edit'; ed.textContent = '✏️ 編集';
+  ed.addEventListener('click', openPhraseEditor);
+  box.appendChild(ed);
+}
+
+// フレーズに追加（☆ボタンから）
+function addPhrase(text){
+  text = (text || '').trim();
+  if(!text) return;
+  if(phrases.includes(text)){ toast('このフレーズはもう登録されています'); return; }
+  phrases.push(text);
+  savePhrases();
+  renderPhrases();
+  toast('⭐ フレーズに追加しました');
+}
+
+// --- 編集画面 ---
+let phWork = [];   // 編集中のコピー（保存を押すまで本物は変えない）
+
+function openPhraseEditor(){
+  phWork = phrases.slice();
+  drawPhraseList();
+  $('phNew').value = '';
+  $('phEdit').classList.add('on');
+}
+
+function drawPhraseList(){
+  const list = $('phList');
+  list.innerHTML = '';
+  phWork.forEach((p, i) => {
+    const row = document.createElement('div');
+    row.className = 'phrow';
+    // 文字を直接書き換える欄
+    const inp = document.createElement('input');
+    inp.type = 'text'; inp.value = p;
+    inp.addEventListener('input', () => { phWork[i] = inp.value; });
+    // 上へ・下へ・削除
+    const up = document.createElement('button'); up.textContent = '▲';
+    const dn = document.createElement('button'); dn.textContent = '▼';
+    const del = document.createElement('button'); del.textContent = '🗑'; del.className = 'del';
+    up.addEventListener('click', () => { if(i > 0){ [phWork[i-1], phWork[i]] = [phWork[i], phWork[i-1]]; drawPhraseList(); } });
+    dn.addEventListener('click', () => { if(i < phWork.length - 1){ [phWork[i+1], phWork[i]] = [phWork[i], phWork[i+1]]; drawPhraseList(); } });
+    del.addEventListener('click', () => { phWork.splice(i, 1); drawPhraseList(); });
+    row.append(inp, up, dn, del);
+    list.appendChild(row);
+  });
+}
+
+function addFromEditor(){
+  const v = $('phNew').value.trim();
+  if(!v) return;
+  phWork.push(v);
+  $('phNew').value = '';
+  drawPhraseList();
+  $('phList').scrollTop = $('phList').scrollHeight;   // 追加した所を見せる
+}
+$('phAdd').addEventListener('click', addFromEditor);
+$('phNew').addEventListener('keydown', e => {
+  if(e.key === 'Enter' && !e.isComposing) addFromEditor();
+});
+
+$('phReset').addEventListener('click', () => {
+  if(!confirm('フレーズを最初の状態に戻しますか？（追加・編集した分は消えます）')) return;
+  phWork = DEFAULT_PHRASES.slice();
+  drawPhraseList();
+});
+
+$('phDone').addEventListener('click', () => {
+  // 入力欄に書きかけがあれば一緒に追加
+  if($('phNew').value.trim()) addFromEditor();
+  // 空の行と重複を取り除いて保存
+  const seen = new Set();
+  phrases = phWork.map(p => p.trim()).filter(p => p && !seen.has(p) && seen.add(p));
+  savePhrases();
+  renderPhrases();
+  refreshStars();
+  $('phEdit').classList.remove('on');
+  toast('フレーズを保存しました');
+});
 
 // 保存されている履歴を表示
 for(const m of history) renderMsg(m);
@@ -817,13 +988,7 @@ $('guestMic').addEventListener('click', () => startListen('guest'));
 /* ==================================================
    定型フレーズ
    ================================================== */
-const phraseBox = $('phrases');
-PHRASES.forEach(p => {
-  const b = document.createElement('button');
-  b.className = 'chip'; b.textContent = p;
-  b.addEventListener('click', () => { unlockTTS(); handleText(p, 'me'); });
-  phraseBox.appendChild(b);
-});
+renderPhrases();
 
 /* ==================================================
    大きく表示（相手に見せる用）
