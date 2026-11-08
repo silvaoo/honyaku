@@ -175,6 +175,8 @@
     background:linear-gradient(135deg,#2a8cff,#0b52d6);
   }
   /* 速さのバー（指で動かしやすいよう上下に余白をとる） */
+  #setting .chk{display:flex;align-items:center;gap:8px;font-weight:normal;font-size:13px;margin-top:8px}
+  #setting .chk input{width:20px;height:20px;accent-color:var(--cyan)}
   #rate{width:100%;height:36px;margin:6px 0 0;accent-color:var(--cyan)}
   .rateScale{
     display:flex;justify-content:space-between;align-items:center;
@@ -408,7 +410,8 @@
       <select id="vGuest"></select>
       <button id="tGuest">▶</button>
     </div>
-    <p class="desc">※選べるのはスマホに入っている人の声だけです。iPhoneの「リーダーと読み上げ」→「声」で追加した声は、アプリを開き直すと一覧に出ます。</p>
+    <label class="chk"><input type="checkbox" id="showAll"> 効果音系も含めて全部の声を表示</label>
+    <p class="desc">※選べるのはスマホに入っている声だけです。iPhoneの「リーダーと読み上げ」→「声」で追加した声は、アプリを開き直すと一覧に出ます。</p>
     <button id="rateReset" style="height:40px;border-radius:12px;border:1px solid var(--line);background:var(--glass);font-size:14px">標準の速さに戻す</button>
 
     <button id="setClose" class="main">閉じる</button>
@@ -519,7 +522,7 @@ try{ localStorage.removeItem('hk_voices'); }catch(e){}   // 前の版の「声�
 let ttsRate = parseFloat(load('hk_rate', '0.95')) || 0.95;
 // 言語ごとに選んだ声の名前（例：{'ja-JP':'Otoya'}）
 let voicePref = {};
-try{ voicePref = JSON.parse(load('hk_voice2', '{}')) || {}; }catch(e){ voicePref = {}; }
+try{ voicePref = JSON.parse(load('hk_voice3', '{}')) || {}; }catch(e){ voicePref = {}; }
 
 /* ==================================================
    言語の選択欄
@@ -713,7 +716,12 @@ function pickVoice(lang){
   const list = humanVoicesFor(lang);
   // 設定画面で選んだ声があれば、それを使う
   const chosen = voicePref[lang];
-  return (chosen && list.find(v => v.name === chosen)) || list.find(v => v.default) || list[0];
+  if(chosen){
+    // 選んだ声はIDで探す（効果音系として外した声を選んだ場合も使えるよう全部から探す）
+    const hit = voicesFor(lang).find(v => (v.voiceURI || v.name) === chosen);
+    if(hit) return hit;
+  }
+  return list.find(v => v.default) || list[0];
 }
 
 // よく知られた声の名前 → 男性・女性（ここにない声は印なし）
@@ -727,7 +735,11 @@ function voiceLabel(v){
   // 「Otoya (Enhanced)」なども Otoya として性別を調べる
   const key = v.name.toLowerCase().replace(/\s*[\(（].*$/, '').trim();
   const g = VOICE_GENDER[key];
-  return v.name + (g ? `（${g}）` : '');
+  // 音質（同じ名前の声が2つあるときの区別）
+  const uri = v.voiceURI || '';
+  const q = /premium/i.test(uri) ? '最高音質' : /enhanced/i.test(uri) ? '高音質' : /compact/i.test(uri) ? '標準音質' : '';
+  const tags = [g, q].filter(Boolean).join('・');
+  return v.name + (tags ? `（${tags}）` : '');
 }
 
 function speak(text, lang, force){
@@ -1169,16 +1181,18 @@ function guestTtsCode(){
 // 声の選択欄に一覧を入れる
 function fillVoiceSelect(sel, code){
   sel.innerHTML = '';
-  const list = humanVoicesFor(code);
+  // 「全部の声を表示」がONなら効果音系も含めて出す
+  const list = $('showAll').checked ? voicesFor(code) : humanVoicesFor(code);
   const std = document.createElement('option');
   std.value = ''; std.textContent = list.length ? '標準' : 'このスマホに声がありません';
   sel.appendChild(std);
   for(const v of list){
     const op = document.createElement('option');
-    op.value = v.name; op.textContent = voiceLabel(v);
+    op.value = v.voiceURI || v.name;   // 同じ名前の声があるのでIDで区別
+    op.textContent = voiceLabel(v);
     sel.appendChild(op);
   }
-  sel.value = (voicePref[code] && list.some(v => v.name === voicePref[code])) ? voicePref[code] : '';
+  sel.value = (voicePref[code] && list.some(v => (v.voiceURI || v.name) === voicePref[code])) ? voicePref[code] : '';
   sel.dataset.code = code;
 }
 
@@ -1188,9 +1202,15 @@ function fillVoiceSelect(sel, code){
     const sel = e.target;
     if(sel.value) voicePref[sel.dataset.code] = sel.value;
     else delete voicePref[sel.dataset.code];
-    save('hk_voice2', JSON.stringify(voicePref));
+    save('hk_voice3', JSON.stringify(voicePref));
     $(id === 'vJa' ? 'tJa' : 'tGuest').click();
   });
+});
+
+// 「全部の声を表示」を切り替えたら一覧を作り直す
+$('showAll').addEventListener('change', () => {
+  fillVoiceSelect($('vJa'), 'ja-JP');
+  fillVoiceSelect($('vGuest'), guestTtsCode());
 });
 
 // 設定画面を開く
