@@ -1158,11 +1158,6 @@ function setRate(r){
 }
 $('rate').addEventListener('input', e => setRate(parseFloat(e.target.value)));
 $('rateReset').addEventListener('click', () => setRate(0.95));
-    unlockTTS();
-    speak('こんにちは。ほんやくくんです。', 'ja-JP', true);   // すぐ試し読み
-  });
-});
-refreshPitch();
 
 $('setBtn').addEventListener('click', openSetting);
 $('setClose').addEventListener('click', () => $('setting').classList.remove('on'));
