@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#1565c0">
+<meta name="theme-color" content="#d6e9fb">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="ほんやくくん">
@@ -15,8 +15,8 @@
   :root{
     --me:#1565c0;        /* 自分（日本語）側の色 */
     --guest:#e65100;     /* 相手側の色 */
-    --bg:#f4f6f9;
-    --card:#ffffff;
+    --bar:#d6e9fb;       /* 上のバー・フレーズ欄の色（薄いブルー） */
+    --card:#eef6ff;      /* 文字が出る部分の色（薄いブルー） */
     --text:#222;
     --sub:#888;
   }
@@ -24,7 +24,7 @@
   html,body{height:100%}
   body{
     font-family:-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif;
-    background:var(--bg);color:var(--text);
+    background:var(--bar);color:var(--text);
     display:flex;flex-direction:column;
     height:100dvh;
     padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
@@ -34,7 +34,7 @@
   /* ===== 上のバー ===== */
   header{
     display:flex;align-items:center;gap:6px;
-    padding:8px 10px;background:#fff;border-bottom:1px solid #ddd;
+    padding:8px 10px;background:var(--bar);border-bottom:1px solid #b9d6f2;
   }
   header h1{font-size:17px;white-space:nowrap}
   #langSelect{
@@ -42,8 +42,8 @@
     border:2px solid var(--guest);background:#fff;font-weight:bold;
   }
   .icon-btn{
-    width:42px;height:42px;border-radius:10px;border:1px solid #ccc;
-    background:#fff;font-size:20px;flex-shrink:0;
+    width:42px;height:42px;border-radius:10px;border:1px solid #9cc3ea;
+    background:var(--card);font-size:20px;flex-shrink:0;
   }
   .icon-btn.off{opacity:.35}
 
@@ -52,8 +52,8 @@
     flex:1;min-height:0;display:flex;flex-direction:column;
     padding:10px;gap:8px;
   }
-  .panel.guest{background:#fff3e0}
-  .panel.me{background:#e3f2fd}
+  .panel.guest{background:#ffe9cf}
+  .panel.me{background:#c9e2fa}
   /* 対面モード：相手側を上下さかさまにする */
   body.facing .panel.guest{transform:rotate(180deg)}
 
@@ -66,38 +66,57 @@
   }
   .bubble .label{display:block;font-size:13px;color:var(--sub);font-weight:normal;margin-bottom:4px}
   .bubble.said{color:var(--sub);font-size:20px}   /* 自分が話した文は灰色で小さめ */
-  .bubble.hint{color:#aaa;font-size:20px;font-weight:normal}
+  .bubble.hint{color:#9aa;font-size:20px;font-weight:normal}
 
+  /* ===== 文字入力（吹き出しの場所に出る） ===== */
+  .typing{flex:1;min-height:0;display:none;flex-direction:column;gap:6px}
+  .panel.typing-on .bubble{display:none}
+  .panel.typing-on .typing{display:flex}
+  .typing textarea{
+    flex:1;min-height:0;width:100%;resize:none;
+    font-size:22px;line-height:1.4;padding:12px;border-radius:14px;
+    border:2px solid var(--me);background:var(--card);font-family:inherit;
+  }
+  .typing textarea:focus{outline:none}
+  .panel.guest .typing textarea{border-color:var(--guest)}
+  .typing .send{
+    padding:10px;border:none;border-radius:12px;font-size:18px;font-weight:bold;color:#fff;
+  }
+  .panel.me .typing .send{background:var(--me)}
+  .panel.guest .typing .send{background:var(--guest)}
+
+  /* ===== マイクとキーボードのボタン ===== */
+  .btn-row{display:flex;gap:8px}
   .mic{
-    width:100%;padding:16px 10px;border:none;border-radius:16px;
+    flex:1;padding:16px 10px;border:none;border-radius:16px;
     font-size:22px;font-weight:bold;color:#fff;
     display:flex;flex-direction:column;align-items:center;gap:2px;
   }
   .mic small{font-size:13px;font-weight:normal;opacity:.9}
+  .kbd{
+    width:70px;flex-shrink:0;border-radius:16px;font-size:26px;background:var(--card);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  }
+  .kbd small{font-size:11px;color:#555}
   .panel.me .mic{background:var(--me)}
   .panel.guest .mic{background:var(--guest)}
+  .panel.me .kbd{border:2px solid var(--me)}
+  .panel.guest .kbd{border:2px solid var(--guest)}
+  .panel.typing-on .kbd{background:#fff7c2}   /* 入力中は色を変える */
   /* 聞き取り中は点滅させる */
   .mic.listening{animation:blink 1s infinite}
   @keyframes blink{50%{opacity:.55}}
 
   /* ===== 定型フレーズ ===== */
   #phrases{
-    display:flex;gap:8px;overflow-x:auto;padding:8px 10px;background:#fff;
-    border-top:1px solid #ddd;scrollbar-width:none;
+    display:flex;gap:8px;overflow-x:auto;padding:8px 10px;background:var(--bar);
+    border-top:1px solid #b9d6f2;scrollbar-width:none;
   }
   #phrases::-webkit-scrollbar{display:none}
   .chip{
     flex-shrink:0;padding:9px 14px;border-radius:20px;border:1px solid var(--me);
-    background:#fff;color:var(--me);font-size:15px;font-weight:bold;
+    background:var(--card);color:var(--me);font-size:15px;font-weight:bold;
   }
-
-  /* ===== 文字入力 ===== */
-  #inputRow{display:flex;gap:6px;padding:8px 10px;background:#fff}
-  #textInput{flex:1;min-width:0;font-size:17px;padding:10px;border:1px solid #ccc;border-radius:10px}
-  /* 入力する人の切り替えボタン（🇯🇵＝自分 / 🌏＝相手） */
-  #dirBtn{width:46px;flex-shrink:0;font-size:22px;border:2px solid var(--me);border-radius:10px;background:#fff}
-  #dirBtn.guest{border-color:var(--guest);background:#fff3e0}
-  #sendBtn{padding:0 16px;font-size:16px;font-weight:bold;border:none;border-radius:10px;background:var(--me);color:#fff}
 
   /* ===== お知らせ（エラーなど） ===== */
   #toast{
@@ -111,11 +130,11 @@
     position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;
     align-items:center;justify-content:center;z-index:30;padding:16px;
   }
-  #help .box{background:#fff;border-radius:16px;padding:18px;max-height:85vh;overflow-y:auto;font-size:16px;line-height:1.7}
+  #help .box{background:var(--card);border-radius:16px;padding:18px;max-height:85vh;overflow-y:auto;font-size:16px;line-height:1.7}
   #help h2{font-size:19px;margin-bottom:8px}
   #help ol{padding-left:1.3em}
   #help button{margin-top:12px;width:100%;padding:12px;font-size:17px;border:none;border-radius:10px;background:var(--me);color:#fff}
-  footer{text-align:center;font-size:11px;color:#999;padding:2px 0 4px;background:#fff}
+  footer{text-align:center;font-size:11px;color:#789;padding:2px 0 4px;background:var(--bar)}
 </style>
 </head>
 <body>
@@ -130,26 +149,33 @@
 </header>
 
 <!-- ===== 相手側パネル ===== -->
-<section class="panel guest">
+<section class="panel guest" id="guestPanel">
   <div class="bubble hint" id="guestText"></div>
-  <button class="mic" id="guestMic"></button>
+  <div class="typing">
+    <textarea id="guestInput" rows="2" enterkeyhint="send"></textarea>
+    <button class="send" id="guestSend"></button>
+  </div>
+  <div class="btn-row">
+    <button class="mic" id="guestMic"></button>
+    <button class="kbd" id="guestKbd">⌨️<small id="guestKbdLabel"></small></button>
+  </div>
 </section>
 
 <!-- ===== 自分側パネル ===== -->
-<section class="panel me">
+<section class="panel me" id="mePanel">
   <div class="bubble hint" id="meText">下のボタンを押して日本語で話してください</div>
-  <button class="mic" id="meMic">🎤 日本語で話す<small>押して話す → 自動で翻訳＆読み上げ</small></button>
+  <div class="typing">
+    <textarea id="meInput" rows="2" placeholder="ここに日本語で入力" enterkeyhint="send"></textarea>
+    <button class="send" id="meSend">翻訳する</button>
+  </div>
+  <div class="btn-row">
+    <button class="mic" id="meMic">🎤 日本語で話す<small>押して話す → 自動で翻訳＆読み上げ</small></button>
+    <button class="kbd" id="meKbd">⌨️<small>文字</small></button>
+  </div>
 </section>
 
 <!-- ===== 定型フレーズ（タップで翻訳） ===== -->
 <div id="phrases"></div>
-
-<!-- ===== 文字入力（声が使えないとき用） ===== -->
-<div id="inputRow">
-  <button id="dirBtn" title="入力する人を切り替え">🇯🇵</button>
-  <input id="textInput" type="text" placeholder="文字で入力（日本語）" enterkeyhint="send">
-  <button id="sendBtn">翻訳</button>
-</div>
 <footer>by AIタケタニ</footer>
 
 <div id="toast"></div>
@@ -163,10 +189,10 @@
       <li>青いボタン「日本語で話す」を押して話す → 相手の言葉に翻訳して読み上げ</li>
       <li>相手にオレンジのボタンを押して話してもらう → 日本語に翻訳して読み上げ</li>
       <li>よく使う言葉は、下の<b>フレーズ</b>をタップするだけ</li>
-      <li>声がうまく入らないときは、一番下に文字で入力。左の🇯🇵を押すと🌏に変わり、<b>相手が自分の言葉で入力</b>できます（音声入力が使えない言語のとき用）</li>
+      <li>声がうまく入らないときは、マイクの横の<b>⌨️</b>で文字入力。相手側の⌨️なら、相手が自分の言葉で入力できます</li>
     </ol>
-    <p style="margin-top:8px">🔊：読み上げのON/OFF<br>🔄：対面モード（相手側の文字をさかさまにして、向かい合って使う）<br>文字の部分をタップすると、もう一度読み上げます。</p>
-    <p style="margin-top:8px;color:#888;font-size:14px">※翻訳には通信が必要です。<br>※翻訳は機械翻訳なので、大事な内容は短い文で区切って話すと伝わりやすいです。</p>
+    <p style="margin-top:8px">🔊：読み上げのON/OFF<br>🔄：対面モード（相手側の文字をさかさまにして、向かい合って使う）<br>翻訳された文字をタップすると、もう一度読み上げます。</p>
+    <p style="margin-top:8px;color:#888;font-size:14px">※翻訳には通信が必要です。<br>※翻訳は機械翻訳なので、大事な内容は短い文で区切って話すと伝わりやすいです。<br>※ネパール語の読み上げは、スマホにヒンディー語の声が入っていると使えます。</p>
     <button id="helpClose">閉じる</button>
   </div>
 </div>
@@ -186,20 +212,25 @@ const MYMEMORY_EMAIL = '';
 // 相手の言語の一覧
 //   sr：音声認識・読み上げ用のコード
 //   mt：翻訳用のコード
-//   speak：相手側ボタンの文字（相手の言葉）
+//   speak：相手側マイクボタンの文字（相手の言葉）
 //   hint：相手側に最初に出す案内（相手の言葉）
+//   type：相手側の文字入力欄の案内（相手の言葉）
+//   send：相手側の翻訳ボタンの文字（相手の言葉）
 const LANGS = {
-  en:{name:'英語 English',          sr:'en-US', mt:'en',    speak:'🎤 Speak',     hint:'Tap the button and speak'},
-  zh:{name:'中国語(簡体) 中文',      sr:'zh-CN', mt:'zh-CN', speak:'🎤 说话',       hint:'请按按钮说话'},
-  tw:{name:'中国語(繁体) 中文',      sr:'zh-TW', mt:'zh-TW', speak:'🎤 說話',       hint:'請按按鈕說話'},
-  ko:{name:'韓国語 한국어',          sr:'ko-KR', mt:'ko',    speak:'🎤 말하기',     hint:'버튼을 누르고 말씀하세요'},
-  th:{name:'タイ語 ไทย',            sr:'th-TH', mt:'th',    speak:'🎤 พูด',        hint:'กดปุ่มแล้วพูด'},
-  vi:{name:'ベトナム語 Tiếng Việt',  sr:'vi-VN', mt:'vi',    speak:'🎤 Nói',        hint:'Nhấn nút và nói'},
-  ne:{name:'ネパール語 नेपाली',       sr:'ne-NP', mt:'ne',    speak:'🎤 बोल्नुहोस्',  hint:'बटन थिचेर बोल्नुहोस्'},
-  id:{name:'インドネシア語 Indonesia',sr:'id-ID', mt:'id',    speak:'🎤 Bicara',     hint:'Tekan tombol lalu bicara'},
-  es:{name:'スペイン語 Español',     sr:'es-ES', mt:'es',    speak:'🎤 Hablar',     hint:'Pulse el botón y hable'},
-  fr:{name:'フランス語 Français',    sr:'fr-FR', mt:'fr',    speak:'🎤 Parler',     hint:'Appuyez sur le bouton et parlez'},
+  en:{name:'英語 English',          sr:'en-US', mt:'en',    speak:'🎤 Speak',      hint:'Tap the button and speak',      type:'Type here',            send:'Translate'},
+  zh:{name:'中国語(簡体) 中文',      sr:'zh-CN', mt:'zh-CN', speak:'🎤 说话',        hint:'请按按钮说话',                   type:'在这里输入',            send:'翻译'},
+  tw:{name:'中国語(繁体) 中文',      sr:'zh-TW', mt:'zh-TW', speak:'🎤 說話',        hint:'請按按鈕說話',                   type:'在這裡輸入',            send:'翻譯'},
+  ko:{name:'韓国語 한국어',          sr:'ko-KR', mt:'ko',    speak:'🎤 말하기',      hint:'버튼을 누르고 말씀하세요',         type:'여기에 입력하세요',      send:'번역'},
+  th:{name:'タイ語 ไทย',            sr:'th-TH', mt:'th',    speak:'🎤 พูด',         hint:'กดปุ่มแล้วพูด',                   type:'พิมพ์ที่นี่',              send:'แปล'},
+  vi:{name:'ベトナム語 Tiếng Việt',  sr:'vi-VN', mt:'vi',    speak:'🎤 Nói',         hint:'Nhấn nút và nói',               type:'Nhập ở đây',           send:'Dịch'},
+  ne:{name:'ネパール語 नेपाली',       sr:'ne-NP', mt:'ne',    speak:'🎤 बोल्नुहोस्',   hint:'बटन थिचेर बोल्नुहोस्',             type:'यहाँ लेख्नुहोस्',          send:'अनुवाद'},
+  id:{name:'インドネシア語 Indonesia',sr:'id-ID', mt:'id',    speak:'🎤 Bicara',      hint:'Tekan tombol lalu bicara',      type:'Ketik di sini',        send:'Terjemahkan'},
+  es:{name:'スペイン語 Español',     sr:'es-ES', mt:'es',    speak:'🎤 Hablar',      hint:'Pulse el botón y hable',        type:'Escriba aquí',         send:'Traducir'},
+  fr:{name:'フランス語 Français',    sr:'fr-FR', mt:'fr',    speak:'🎤 Parler',      hint:'Appuyez sur le bouton et parlez',type:'Écrivez ici',          send:'Traduire'},
 };
+
+// 声がない言語の代わりに使う声（ネパール語 → 同じ文字のヒンディー語）
+const TTS_FALLBACK = {'ne-NP':'hi-IN'};
 
 // 定型フレーズ（自由に書き換えてOK）
 const PHRASES = [
@@ -259,6 +290,9 @@ langSelect.addEventListener('change', () => {
 function refreshGuestUI(resetText){
   const l = LANGS[guestLang];
   guestMic.innerHTML = `${l.speak}<small>（相手が話す・${l.name.split(' ')[0]}）</small>`;
+  $('guestInput').placeholder = l.type;
+  $('guestSend').textContent = l.send;
+  $('guestKbdLabel').textContent = l.type.length <= 6 ? l.type : '';
   if(resetText){
     setBubble(guestText, l.hint, 'hint');
   }
@@ -278,7 +312,6 @@ function setBubble(el, text, type, label){
   }
   el.appendChild(document.createTextNode(text));
   el.dataset.text = (type === 'result') ? text : '';   // タップで再読み上げ用
-  el.dataset.lang = '';
 }
 
 /* ==================================================
@@ -346,9 +379,8 @@ function speak(text, lang){
   const u = new SpeechSynthesisUtterance(text);
   u.lang = lang;
   u.rate = 0.95;                 // 少しゆっくりめ
-  // 声がない言語の代わりに使う声（ネパール語 → 同じ文字のヒンディー語）
-  const TTS_FALLBACK = {'ne-NP':'hi-IN'};
   let v = pickVoice(lang);
+  // その言語の声がなければ、代わりの声を探す
   if(!v && TTS_FALLBACK[lang]){
     v = pickVoice(TTS_FALLBACK[lang]);
     if(v) u.lang = TTS_FALLBACK[lang];
@@ -356,7 +388,7 @@ function speak(text, lang){
   if(v){
     u.voice = v;
   }else if(voices.length > 0 && lang !== 'ja-JP'){
-    // この端末にその言語の声がない（ネパール語など）→ 画面の文字を見せてもらう
+    // 代わりの声もない → 画面の文字を見せてもらう
     toast('この言語の読み上げ音声がスマホにありません。画面の文字を見せてください');
     return;
   }
@@ -386,7 +418,7 @@ function unlockTTS(){
 });
 
 /* ==================================================
-   話した文を翻訳して表示・読み上げ
+   話した（入力した）文を翻訳して表示・読み上げ
    side: 'me'（日本語→相手） / 'guest'（相手→日本語）
    ================================================== */
 let busy = false;
@@ -394,6 +426,7 @@ async function handleText(text, side){
   text = text.trim();
   if(!text || busy) return;
   busy = true;
+  closeTyping();                 // 文字入力中なら閉じる
   const l = LANGS[guestLang];
   const isMe = (side === 'me');
   const fromEl = isMe ? meText : guestText;
@@ -417,6 +450,51 @@ async function handleText(text, side){
 }
 
 /* ==================================================
+   文字入力（マイクの横の⌨️ボタン）
+   ================================================== */
+const panels = {
+  me:    {panel:$('mePanel'),    input:$('meInput'),    send:$('meSend'),    kbd:$('meKbd')},
+  guest: {panel:$('guestPanel'), input:$('guestInput'), send:$('guestSend'), kbd:$('guestKbd')},
+};
+
+// 入力欄を開く／閉じる（もう一度⌨️を押すと閉じる）
+function toggleTyping(side){
+  const p = panels[side];
+  const isOpen = p.panel.classList.contains('typing-on');
+  closeTyping();
+  if(!isOpen){
+    stopListening();
+    p.panel.classList.add('typing-on');
+    p.input.value = '';
+    p.input.focus();             // キーボードを出す
+  }
+}
+function closeTyping(){
+  for(const p of Object.values(panels)){
+    p.panel.classList.remove('typing-on');
+    p.input.blur();
+  }
+}
+function sendTyping(side){
+  unlockTTS();
+  const v = panels[side].input.value;
+  if(!v.trim()){ closeTyping(); return; }
+  handleText(v, side);
+}
+
+for(const [side, p] of Object.entries(panels)){
+  p.kbd.addEventListener('click', () => toggleTyping(side));
+  p.send.addEventListener('click', () => sendTyping(side));
+  // Enterで送信（改行はしない）。変換確定のEnterは無視
+  p.input.addEventListener('keydown', e => {
+    if(e.key === 'Enter' && !e.isComposing){
+      e.preventDefault();
+      sendTyping(side);
+    }
+  });
+}
+
+/* ==================================================
    音声認識（マイク）
    ================================================== */
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -427,24 +505,33 @@ function updateMicUI(){
   guestMic.classList.toggle('listening', !!current && current.side === 'guest');
 }
 
+// 聞き取り中なら中止する
+function stopListening(){
+  if(current){
+    current.cancelled = true;
+    current.rec.abort();
+    current = null;
+    updateMicUI();
+  }
+}
+
 function startListen(side){
   unlockTTS();
+  closeTyping();
   if(!SR){
-    toast('このブラウザは音声入力に対応していません。下の文字入力を使ってください');
+    toast('このブラウザは音声入力に対応していません。⌨️で文字入力してください');
     return;
   }
   // 同じボタンをもう一度押したら、そこで聞き取りを終わる
   if(current){
     if(current.side === side){ current.rec.stop(); return; }
     // 反対側が聞き取り中なら中止して切り替える
-    current.cancelled = true;
-    current.rec.abort();
-    current = null;
+    stopListening();
   }
   if(window.speechSynthesis) speechSynthesis.cancel();   // 読み上げ中なら止める
 
   const rec = new SR();
-  const session = {side, rec, cancelled:false, finalText:'', interim:'', errored:false};
+  const session = {side, rec, cancelled:false, finalText:'', interim:''};
   current = session;
 
   rec.lang = (side === 'me') ? 'ja-JP' : LANGS[guestLang].sr;
@@ -468,13 +555,12 @@ function startListen(side){
   };
 
   rec.onerror = (e) => {
-    session.errored = true;
     if(e.error === 'not-allowed' || e.error === 'service-not-allowed'){
       toast('マイクが許可されていません。設定でマイクを許可してください');
     }else if(e.error === 'no-speech'){
       toast('声が聞き取れませんでした。もう一度どうぞ');
     }else if(e.error === 'language-not-supported'){
-      toast('この言語の音声入力はこのスマホでは使えません。下の🌏で相手に文字入力してもらってください');
+      toast('この言語の音声入力はこのスマホでは使えません。⌨️で相手に文字入力してもらってください');
     }else if(e.error === 'network'){
       toast('通信エラーです。電波を確認してください');
     }else if(e.error !== 'aborted'){
@@ -520,40 +606,6 @@ PHRASES.forEach(p => {
 });
 
 /* ==================================================
-   文字入力
-   ================================================== */
-// 入力する人：'me'（自分・日本語） / 'guest'（相手・相手の言葉）
-let inputSide = 'me';
-const dirBtn = $('dirBtn');
-function refreshDirBtn(){
-  const isMe = (inputSide === 'me');
-  dirBtn.textContent = isMe ? '🇯🇵' : '🌏';
-  dirBtn.classList.toggle('guest', !isMe);
-  $('textInput').placeholder = isMe
-    ? '文字で入力（日本語）'
-    : '相手が入力（' + LANGS[guestLang].name.split(' ')[0] + '）';
-}
-dirBtn.addEventListener('click', () => {
-  inputSide = (inputSide === 'me') ? 'guest' : 'me';
-  refreshDirBtn();
-});
-// 言語を変えたら入力欄の案内も変える
-langSelect.addEventListener('change', refreshDirBtn);
-
-function sendInput(){
-  unlockTTS();
-  const v = $('textInput').value;
-  if(!v.trim()) return;
-  $('textInput').value = '';
-  $('textInput').blur();          // キーボードを閉じる
-  handleText(v, inputSide);
-}
-$('sendBtn').addEventListener('click', sendInput);
-$('textInput').addEventListener('keydown', e => {
-  if(e.key === 'Enter' && !e.isComposing) sendInput();   // 変換確定のEnterは無視
-});
-
-/* ==================================================
    上のバーのボタン
    ================================================== */
 const ttsBtn = $('ttsBtn');
@@ -580,7 +632,7 @@ $('helpClose').addEventListener('click',() => $('help').style.display = 'none');
 refreshGuestUI(true);
 refreshTtsBtn();
 refreshFace();
-if(!SR) toast('このブラウザは音声入力に未対応です。文字入力とフレーズは使えます');
+if(!SR) toast('このブラウザは音声入力に未対応です。⌨️の文字入力とフレーズは使えます');
 
 // オフライン用（Service Worker）の登録
 if('serviceWorker' in navigator){
