@@ -346,7 +346,13 @@ function speak(text, lang){
   const u = new SpeechSynthesisUtterance(text);
   u.lang = lang;
   u.rate = 0.95;                 // 少しゆっくりめ
-  const v = pickVoice(lang);
+  // 声がない言語の代わりに使う声（ネパール語 → 同じ文字のヒンディー語）
+  const TTS_FALLBACK = {'ne-NP':'hi-IN'};
+  let v = pickVoice(lang);
+  if(!v && TTS_FALLBACK[lang]){
+    v = pickVoice(TTS_FALLBACK[lang]);
+    if(v) u.lang = TTS_FALLBACK[lang];
+  }
   if(v){
     u.voice = v;
   }else if(voices.length > 0 && lang !== 'ja-JP'){
