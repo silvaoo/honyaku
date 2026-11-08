@@ -1,6 +1,6 @@
 // ===== ほんやくくん Service Worker =====
 // 中身を更新したら、この番号を上げる（v1 → v2 …）
-const CACHE = 'honyaku-v23';
+const CACHE = 'honyaku-v24';
 
 // 保存しておくファイル
 const FILES = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './apple-touch-icon.png', './qr.js'];

@@ -476,7 +476,7 @@
       <li>よく使う言葉は<b>フレーズ</b>をタップするだけ。自分が話した・入力した日本語は、吹き出しの<b>☆</b>でフレーズに追加できます。フレーズ欄の右端の<b>✏️編集</b>で書き換え・並べ替え・削除</li>
     </ol>
     <p class="note">🔊（吹き出しの中）：もう一度読み上げ<br>⛶：大きく表示して相手に見せる（🔄でさかさまにして対面で見せられます）<br>Aa：文字の大きさ（普通・大・特大）<br>⚙：読み上げの速さ・アプリの共有（LINE・QRコード）<br>フレーズの右上の点：翻訳を覚えていて、すぐ出せる・圏外でも使える印<br>⬇：会話の一番上で下に引っぱって離すと、会話を消して更新します</p>
-    <p class="note">※「🌐 自動判定」のとき、相手の水色ボタンは録音して<b>声から何語かを判定</b>します（有料のAIを使用）。言語がわかると自動でその言語に切り替わり、2回目からは無料で聞き取ります。会話の一番上で下に引っぱって会話を消すと「🌐 自動判定」に戻ります（次のお客さん用）。<br>※翻訳には通信が必要です。機械翻訳なので、短い文で区切ると伝わりやすいです。<br>※ネパール語は、スマホにネパール語の声がなければヒンディー語の声で読み上げます。</p>
+    <p class="note">※「🌐 自動判定」のとき、相手の水色ボタンは録音して<b>声から何語かを判定</b>します（有料のAIを使用）。言語がわかると自動でその言語に切り替わり、2回目からは無料で聞き取ります。アプリを閉じて開き直すと「🌐 自動判定」に戻ります（下に引っぱる更新では戻りません）。違う国のお客さんのときは、上の欄で言語を選び直してください。<br>※翻訳には通信が必要です。機械翻訳なので、短い文で区切ると伝わりやすいです。<br>※ネパール語は、スマホにネパール語の声がなければヒンディー語の声で読み上げます。</p>
     <button id="helpClose">閉じる</button>
   </div>
 </div>
@@ -550,8 +550,15 @@ function save(key, val){
 // guestSel：選択欄の値（'auto' または言語コード）
 // guestLang：実際に使う相手の言語（自動のときは最後に判定した言語）
 let guestSel  = load('hk_sel', 'auto');
-// 自動判定で言語を切り替えていたら、開き直したとき（＝次のお客さん）は自動判定に戻す
-if(load('hk_autolock', '0') === '1'){ guestSel = 'auto'; save('hk_sel', 'auto'); save('hk_autolock', '0'); }
+// 自動判定で言語を切り替えていたら、アプリを閉じて開き直したときだけ自動判定に戻す。
+// 下に引っぱる更新（リロード）では戻さない（毎回お金がかからないように）。
+// sessionStorage はアプリを閉じるまでだけ残るので、これで「リロード」と「開き直し」を見分ける。
+let freshStart = true;
+try{
+  freshStart = !sessionStorage.getItem('hk_session');
+  sessionStorage.setItem('hk_session', '1');
+}catch(e){}
+if(freshStart && load('hk_autolock', '0') === '1'){ guestSel = 'auto'; save('hk_sel', 'auto'); save('hk_autolock', '0'); }
 let guestLang = load('hk_lang', 'en');
 if(guestSel !== 'auto' && !LANGS[guestSel]) guestSel = 'auto';
 if(!LANGS[guestLang]) guestLang = 'en';
@@ -1359,7 +1366,7 @@ async function identifyAndTranslate(blob, ext){
 }
 
 // 自動判定で言語がわかったら、その言語に切り替える
-// → 2回目からは無料の聞き取りになる。会話を消す（下に引っぱる）と自動判定に戻る
+// → 2回目からは無料の聞き取りになる。アプリを閉じて開き直すと自動判定に戻る
 function lockDetectedLang(code){
   if(!LANGS[code]) return;
   guestSel = code;
