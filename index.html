@@ -116,6 +116,11 @@
   .msg .who{font-size:11px;color:var(--sub);margin-bottom:2px}
   .msg .orig{font-size:calc(14px * var(--fs));color:var(--sub)}
   .msg .trans{font-size:calc(21px * var(--fs));font-weight:bold;margin-top:3px}
+  /* 逆翻訳（翻訳をもう一度日本語に戻したもの。誤訳に気づくための確認用） */
+  .msg .back{
+    font-size:calc(12px * var(--fs));color:rgba(255,255,255,.72);
+    margin-top:5px;padding-top:4px;border-top:1px dashed rgba(255,255,255,.3);
+  }
   .msg .tools{display:flex;gap:4px;justify-content:flex-end;margin-top:4px}
   .msg .tools button{
     background:none;border:none;font-size:18px;padding:4px 6px;opacity:.75;
@@ -198,6 +203,10 @@
   }
 
   /* ===== 共有 ===== */
+  #setting .glbtn{
+    height:44px;border-radius:14px;font-size:15px;font-weight:bold;
+    border:1px solid var(--line);background:var(--glass);
+  }
   #setting .sharebig{
     height:48px;border-radius:14px;font-size:16px;font-weight:bold;
     border:1px solid var(--cyan);background:rgba(62,198,255,.14);
@@ -224,19 +233,19 @@
   #shareQrBox .cap{font-size:12px;color:var(--sub);margin-top:6px}
 
   /* ===== フレーズの編集画面 ===== */
-  #phEdit{
+  #phEdit,#glEdit{
     position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;
     align-items:center;justify-content:center;z-index:45;padding:16px;
   }
-  #phEdit.on{display:flex}
-  #phEdit .box{
+  #phEdit.on,#glEdit.on{display:flex}
+  #phEdit .box,#glEdit .box{
     width:100%;max-height:88vh;display:flex;flex-direction:column;gap:10px;
     background:linear-gradient(180deg,#0f3a8c,#08214f);border:1px solid var(--line);
     border-radius:20px;padding:16px;
   }
-  #phEdit h2{font-size:18px}
-  #phEdit .desc{font-size:12px;color:var(--sub)}
-  #phList{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:6px}
+  #phEdit h2,#glEdit h2{font-size:18px}
+  #phEdit .desc,#glEdit .desc{font-size:12px;color:var(--sub);line-height:1.6}
+  #phList,#glList{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:6px}
   .phrow{display:flex;gap:4px;align-items:center}
   .phrow input,#phNew{
     flex:1;min-width:0;height:42px;border-radius:12px;padding:0 10px;font-size:15px;color:#fff;
@@ -426,6 +435,24 @@
   </div>
 </div>
 
+<!-- ===== 地名・停留所の辞書 ===== -->
+<div id="glEdit">
+  <div class="box">
+    <h2>📍 地名・停留所の辞書</h2>
+    <p class="desc">ここに入れた地名は、翻訳で変な訳にならず、必ず右の英字表記で伝わります（中国語では「漢字(英字)」で出します）。</p>
+    <div id="glList"></div>
+    <div class="phrow">
+      <input id="glNewJa" type="text" placeholder="日本語（例：学園前）" autocomplete="off">
+      <input id="glNewEn" type="text" placeholder="英字（例：Gakuen-mae）" autocomplete="off" autocapitalize="words">
+      <button id="glAdd">＋</button>
+    </div>
+    <div class="phbtns">
+      <button id="glReset">最初の状態に戻す</button>
+      <button id="glDone" class="main">保存して閉じる</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== 声の設定 ===== -->
 <div id="setting">
   <div class="box">
@@ -440,6 +467,9 @@
     </div>
     <button id="rateReset" style="height:40px;border-radius:12px;border:1px solid var(--line);background:var(--glass);font-size:14px">標準の速さに戻す</button>
 
+
+    <label style="margin-top:14px">地名を正しく伝える</label>
+    <button id="glBtn" class="glbtn">📍 地名・停留所の辞書</button>
 
     <label style="margin-top:14px">アプリを仲間に教える</label>
     <button id="shareBtn" class="sharebig">📤 LINE・QRコードで共有</button>
@@ -475,7 +505,7 @@
       <li>下の入力欄は<b>何語でもOK</b>。日本語なら相手の言葉へ、外国語なら日本語へ自動で翻訳します</li>
       <li>よく使う言葉は<b>フレーズ</b>をタップするだけ。自分が話した・入力した日本語は、吹き出しの<b>☆</b>でフレーズに追加できます。フレーズ欄の右端の<b>✏️編集</b>で書き換え・並べ替え・削除</li>
     </ol>
-    <p class="note">🔊（吹き出しの中）：もう一度読み上げ<br>⛶：大きく表示して相手に見せる（🔄でさかさまにして対面で見せられます）<br>Aa：文字の大きさ（普通・大・特大）<br>⚙：読み上げの速さ・アプリの共有（LINE・QRコード）<br>フレーズの右上の点：翻訳を覚えていて、すぐ出せる・圏外でも使える印<br>⬇：会話の一番上で下に引っぱって離すと、会話を消して更新します</p>
+    <p class="note">🔊（吹き出しの中）：もう一度読み上げ<br>⛶：大きく表示して相手に見せる（🔄でさかさまにして対面で見せられます）<br>Aa：文字の大きさ（普通・大・特大）<br>⚙：読み上げの速さ・アプリの共有（LINE・QRコード）<br>↩（吹き出しの中の小さな文字）：翻訳をもう一度日本語に戻したもの。意味が変わっていたら、言い方を変えてもう一度<br>📍 地名・停留所の辞書（⚙の中）：登録した地名は、必ず決めた英字表記で伝わります<br>フレーズの右上の点：翻訳を覚えていて、すぐ出せる・圏外でも使える印<br>⬇：会話の一番上で下に引っぱって離すと、会話を消して更新します</p>
     <p class="note">※「🌐 自動判定」のとき、相手の水色ボタンは録音して<b>声から何語かを判定</b>します（有料のAIを使用）。言語がわかると自動でその言語に切り替わり、2回目からは無料で聞き取ります。アプリを閉じて開き直すと「🌐 自動判定」に戻ります（下に引っぱる更新では戻りません）。違う国のお客さんのときは、上の欄で言語を選び直してください。<br>※翻訳には通信が必要です。機械翻訳なので、短い文で区切ると伝わりやすいです。<br>※ネパール語は、スマホにネパール語の声がなければヒンディー語の声で読み上げます。</p>
     <button id="helpClose">閉じる</button>
   </div>
@@ -688,11 +718,146 @@ function toast(msg){
 }
 
 /* ==================================================
+   地名・停留所の辞書
+   翻訳にかける前に、地名を決めた英字表記に置き換える（変な訳を防ぐ）。
+   文字の置き換えだけなので、iPhone・Androidどちらでも同じように動く。
+   ================================================== */
+// 最初から入っている地名（例。⚙ → 地名・停留所の辞書 で直せる）
+const DEFAULT_GLOSS = [
+  {ja:'学研北生駒', en:'Gakken Kita-Ikoma'},
+  {ja:'東生駒',     en:'Higashi-Ikoma'},
+  {ja:'学園前',     en:'Gakuen-mae'},
+  {ja:'北大和',     en:'Kita-Yamato'},
+  {ja:'生駒',       en:'Ikoma'},
+];
+let gloss = DEFAULT_GLOSS.map(g => ({ja:g.ja, en:g.en}));
+try{
+  const g = JSON.parse(load('hk_gloss', 'null'));
+  if(Array.isArray(g)) gloss = g;
+}catch(e){}
+
+// 正規表現で特別な意味を持つ文字を、ただの文字として扱えるようにする
+function escRe(t){ return t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+// 辞書の語を「長い順」に並べる（「生駒」より先に「東生駒」を見つけるため）
+function glossWords(key){
+  return gloss.map(g => g[key]).filter(Boolean).sort((a, b) => b.length - a.length).map(escRe);
+}
+function findByEn(m){ return gloss.find(g => g.en.toLowerCase() === m.toLowerCase()); }
+
+// ① 日本語の文の中の地名を、英字表記に置き換える（翻訳の前）
+function glossaryIn(text){
+  const w = glossWords('ja');
+  if(!w.length) return text;
+  return text.replace(new RegExp(w.join('|'), 'g'), m => {
+    const g = gloss.find(x => x.ja === m);
+    return g ? g.en : m;
+  });
+}
+// 英字表記を見つける正規表現（前後がアルファベットのときは別の単語なので除く）
+function enRe(){
+  const w = glossWords('en');
+  return w.length ? new RegExp('(^|[^A-Za-z])(' + w.join('|') + ')(?![A-Za-z])', 'gi') : null;
+}
+// ② 翻訳された文の仕上げ（中国語は、看板と同じ漢字も添える：学園前(Gakuen-mae)）
+function glossaryOut(text, to){
+  if(!/^zh/i.test(to)) return text;
+  const re = enRe();
+  if(!re) return text;
+  return text.replace(re, (all, pre, m) => {
+    const g = findByEn(m);
+    return pre + (g ? `${g.ja}(${g.en})` : m);
+  });
+}
+// ③ 日本語に訳された文の中の英字表記を、日本語の地名に戻す
+function glossaryToJa(text){
+  const re = enRe();
+  if(!re) return text;
+  let out = text.replace(re, (all, pre, m) => {
+    const g = findByEn(m);
+    return pre + (g ? g.ja : m);
+  });
+  // 「学園前(学園前)」のように重なったら1つにする
+  for(const g of gloss){
+    out = out.split(`${g.ja}(${g.ja})`).join(g.ja).split(`${g.ja}（${g.ja}）`).join(g.ja);
+  }
+  return out;
+}
+
+// --- 辞書の編集画面 ---
+let glWork = [];   // 編集中のコピー（保存を押すまで本物は変えない）
+function drawGlossList(){
+  const list = $('glList');
+  list.innerHTML = '';
+  glWork.forEach((g, i) => {
+    const row = document.createElement('div');
+    row.className = 'phrow';
+    const ja = document.createElement('input'); ja.type = 'text'; ja.value = g.ja;
+    const en = document.createElement('input'); en.type = 'text'; en.value = g.en;
+    ja.addEventListener('input', () => { glWork[i].ja = ja.value; });
+    en.addEventListener('input', () => { glWork[i].en = en.value; });
+    const del = document.createElement('button'); del.textContent = '🗑'; del.className = 'del';
+    del.addEventListener('click', () => { glWork.splice(i, 1); drawGlossList(); });
+    row.append(ja, en, del);
+    list.appendChild(row);
+  });
+}
+function addGlossFromEditor(){
+  const ja = $('glNewJa').value.trim(), en = $('glNewEn').value.trim();
+  if(!ja || !en){ toast('日本語と英字の両方を入れてください'); return false; }
+  glWork.push({ja, en});
+  $('glNewJa').value = ''; $('glNewEn').value = '';
+  drawGlossList();
+  $('glList').scrollTop = $('glList').scrollHeight;
+  return true;
+}
+$('glBtn').addEventListener('click', () => {
+  glWork = gloss.map(g => ({ja:g.ja, en:g.en}));
+  drawGlossList();
+  $('glNewJa').value = ''; $('glNewEn').value = '';
+  $('setting').classList.remove('on');
+  $('glEdit').classList.add('on');
+});
+$('glAdd').addEventListener('click', addGlossFromEditor);
+$('glReset').addEventListener('click', () => {
+  if(!confirm('辞書を最初の状態に戻しますか？（追加・編集した分は消えます）')) return;
+  glWork = DEFAULT_GLOSS.map(g => ({ja:g.ja, en:g.en}));
+  drawGlossList();
+});
+$('glDone').addEventListener('click', () => {
+  // 入力欄に書きかけがあれば一緒に追加（片方だけなら止める）
+  if($('glNewJa').value.trim() || $('glNewEn').value.trim()){
+    if(!addGlossFromEditor()) return;
+  }
+  // 空の行と、同じ日本語の重複を取り除いて保存
+  const seen = new Set();
+  gloss = glWork.map(g => ({ja:g.ja.trim(), en:g.en.trim()}))
+                .filter(g => g.ja && g.en && !seen.has(g.ja) && seen.add(g.ja));
+  save('hk_gloss', JSON.stringify(gloss));
+  // 地名の訳し方が変わるので、覚えていたフレーズの翻訳は作り直す
+  phCache = {};
+  save('hk_phcache', '{}');
+  backCache.clear();
+  refreshChipReady();
+  prefetchPhrases();
+  $('glEdit').classList.remove('on');
+  toast('辞書を保存しました');
+});
+
+/* ==================================================
    翻訳
    ================================================== */
 let gasWarned = false;   // 「予備に切り替えた」お知らせを1回だけ出す用
 
+// 辞書つきの翻訳（アプリの中の翻訳はすべてここを通る）
 async function translate(text, from, to){
+  const src = (from === 'ja') ? glossaryIn(text) : text;   // 地名を英字表記に
+  let out = await translateRaw(src, from, to);
+  if(from === 'ja') out = glossaryOut(out, to);            // 中国語は漢字も添える
+  if(to === 'ja')   out = glossaryToJa(out);               // 英字表記を日本語の地名に戻す
+  return out;
+}
+
+async function translateRaw(text, from, to){
   if(!navigator.onLine) throw new Error('オフラインです。電波のある所で使ってください');
 
   if(ENGINE === 'gas' && GAS_URL){
@@ -1076,6 +1241,30 @@ for(const m of history) renderMsg(m);
    翻訳して履歴に追加
    side：'me'（日本語→相手） / 'guest'（相手→日本語）
    ================================================== */
+/* 逆翻訳チェック：翻訳した文を、もう一度日本語に戻して小さく表示する。
+   元の文と意味が変わっていたら誤訳のサイン。読み上げを待たせないよう、あとから表示する。 */
+const backCache = new Map();   // 同じ文は聞き直さない（アプリを開いている間だけ覚える）
+async function showBack(el, msg){
+  const l = LANGS[msg.lang];
+  if(!l) return;
+  const key = msg.lang + '|' + msg.trans;
+  let back = backCache.get(key);
+  if(!back){
+    if(!navigator.onLine) return;            // 圏外のときは出さない
+    try{ back = await translate(msg.trans, l.mt, 'ja'); }catch(e){ return; }
+    backCache.set(key, back);
+  }
+  if(!el.isConnected) return;                // 会話が消されていたら何もしない
+  let b = el.querySelector('.back');
+  if(!b){
+    b = document.createElement('div');
+    b.className = 'back';
+    el.insertBefore(b, el.querySelector('.tools'));
+  }
+  b.textContent = '↩ ' + back;
+  scrollBottom();
+}
+
 async function handleText(text, side, lang){
   text = text.trim();
   if(!text) return;
@@ -1098,6 +1287,7 @@ async function handleText(text, side, lang){
     history.push({side, lang, orig:text, trans:out});
     saveHistory();
     speak(out, ttsLangOf(msg));
+    if(side === 'me') showBack(el, msg);   // 逆翻訳は待たずに、あとから表示
   }catch(err){
     msg.err = true; delete msg.pending;
     el.classList.add('err');
@@ -1406,7 +1596,7 @@ function handleDetected(r){
     toast('このアプリにない言語でした（' + (r.lang || '不明') + '）。日本語訳だけ出します');
   }
   // 吹き出しを出す（日本語訳はGASで済んでいるので、そのまま表示）
-  const msg = {side:'guest', lang: code || 'xx', orig:r.text, trans:r.ja || '（翻訳できませんでした）'};
+  const msg = {side:'guest', lang: code || 'xx', orig:r.text, trans:glossaryToJa(r.ja || '') || '（翻訳できませんでした）'};
   const el = renderMsg(msg);
   updateTools(el);
   history.push(msg); saveHistory();
